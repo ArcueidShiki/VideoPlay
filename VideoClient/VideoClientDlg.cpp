@@ -45,9 +45,9 @@ BOOL CVideoClientDlg::OnInitDialog()
 	SetIcon(m_hIcon, TRUE);			// Set big icon
 	SetIcon(m_hIcon, FALSE);		// Set small icon
 
-	ShowWindow(SW_MAXIMIZE);
+	//ShowWindow(SW_MAXIMIZE);
 
-	ShowWindow(SW_MINIMIZE);
+	//ShowWindow(SW_MINIMIZE);
 
 	// TODO: Add extra initialization here
 
