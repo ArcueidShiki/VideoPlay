@@ -54,6 +54,9 @@
     <None Include="res\VideoClient.rc2">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="..\Design.uml">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\VideoClient.ico">
