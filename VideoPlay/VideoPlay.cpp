@@ -3,8 +3,41 @@
 
 #include <iostream>
 #include <vlc.h>
+#include <codecvt>
+#include <Windows.h>
+#include <conio.h>
 
 #define VIDEO_PATH "..\\resources\\Login_Movie.mp4"
+
+std::string Unicode2Utf8(const std::wstring& wstr)
+{
+    std::wstring_convert<std::codecvt_utf8<wchar_t>> conv;
+    return conv.to_bytes(wstr);
+}
+
+std::wstring Utf82Unicode(const std::string& str)
+{
+    std::wstring_convert<std::codecvt_utf8<wchar_t>> conv;
+    return conv.from_bytes(str);
+}
+
+std::string UnicodeToUtf8(const std::wstring& wstr)
+{
+    std::string str;
+    str.reserve(wstr.size() * 4);
+    ::WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), wstr.size(), (LPSTR)str.c_str(), str.length(), NULL, NULL);
+    return str;
+}
+
+std::wstring Utf8ToUnicode(const std::string& str)
+{
+	std::wstring wstr;
+	wstr.reserve(str.size());
+	::MultiByteToWideChar(CP_UTF8, 0, str.c_str(), str.size(), (LPWSTR)wstr.c_str(), wstr.length());
+	return wstr;
+}
+
+
 
 int main()
 {
@@ -23,11 +56,20 @@ int main()
             printf("err found!\r\n");
             break;
         }
+        Sleep(300);
+        int vol = libvlc_audio_get_volume(player);
+		printf("Volume = %d\r\n", vol);
+        libvlc_audio_set_volume(player, 10);
         libvlc_time_t time = libvlc_media_player_get_length(player);
-        printf("%02lld:%02lld:%02lld\r\n", time / 3600, (time / 60) % 60, time % 60);
+        printf("%02lld:%02lld:%02lld.%03lld\r\n", time / 3600000, (time / 60000) % 60, (time / 1000) % 60, time % 1000);
         int height = libvlc_video_get_height(player);
         int width = libvlc_video_get_width(player);
         printf("Width = %d, Height = %d\r\n", width, height);
+        while (!_kbhit())
+        {
+            printf("Playing... %08.2f%%\r", 100 * libvlc_media_player_get_position(player));
+            Sleep(500);
+        }
         getchar();
         libvlc_media_player_pause(player);
         getchar();
