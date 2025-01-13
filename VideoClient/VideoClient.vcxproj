@@ -204,6 +204,7 @@
     <ResourceCompile Include="VideoClient.rc" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\Design.uml" />
     <None Include="res\VideoClient.rc2" />
   </ItemGroup>
   <ItemGroup>
