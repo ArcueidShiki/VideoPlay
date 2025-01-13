@@ -21,16 +21,17 @@ CVideoClientDlg::CVideoClientDlg(CWnd* pParent /*=nullptr*/)
 	: CDialogEx(IDD_VIDEOCLIENT_DIALOG, pParent)
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
+	m_isPlaying = false;
 }
 
 void CVideoClientDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialogEx::DoDataExchange(pDX);
 	DDX_Control(pDX, IDC_EDIT_PLAY, m_video);
-	DDX_Control(pDX, IDC_SLIDER_POS, m_pos);
 	DDX_Control(pDX, IDC_SLIDER_VOLUME, m_volume);
 	DDX_Control(pDX, IDC_EDIT_URL, m_url);
 	DDX_Control(pDX, IDC_BTN_PLAY, m_btnPlay);
+	DDX_Control(pDX, IDC_SLIDER_POS, m_pos);
 }
 
 BEGIN_MESSAGE_MAP(CVideoClientDlg, CDialogEx)
@@ -41,6 +42,8 @@ BEGIN_MESSAGE_MAP(CVideoClientDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BTN_STOP, &CVideoClientDlg::OnBnClickedBtnStop)
 	ON_BN_CLICKED(IDC_BTN_PLAY, &CVideoClientDlg::OnBnClickedBtnPlay)
 	ON_WM_SIZE()
+	ON_WM_HSCROLL()
+	ON_WM_VSCROLL()
 END_MESSAGE_MAP()
 
 
@@ -57,12 +60,13 @@ BOOL CVideoClientDlg::OnInitDialog()
 	GetClientRect(&m_lastRect);
 	std::vector<CONTROL_ID> controlIds ={
 		IDC_EDIT_PLAY,
-		IDC_SLIDER_POS,
 		IDC_SLIDER_VOLUME,
 		IDC_EDIT_URL,
 		IDC_BTN_PLAY,
 		IDC_BTN_STOP,
-		IDC_STATIC,
+		IDC_STATIC_MEDIA_LOCATION,
+		IDC_STATIC_VOLUME,
+		IDC_STATIC_TIME,
 	};
 	for (CONTROL_ID id : controlIds)
 	{
@@ -75,8 +79,16 @@ BOOL CVideoClientDlg::OnInitDialog()
 			m_controlRects[id] = rect;
 		}
 	}
+	SetTimer(0, 500, NULL);
+	m_pos.ContinueModal();
+	m_pos.SetRange(0, 100);
+	m_volume.SetRange(0, 100);
+	m_volume.SetTic(10);
+	//m_volume.SetTic(100);
+	m_volume.SetTicFreq(20);
+	SetDlgItemText(IDC_STATIC_VOLUME, L"100%");
+	SetDlgItemText(IDC_STATIC_TIME, L"00:00:00/00:00:00");
 	//ShowWindow(SW_MAXIMIZE);
-
 	//ShowWindow(SW_MINIMIZE);
 
 	return TRUE;  // return TRUE  unless you set the focus to a control
@@ -122,8 +134,12 @@ HCURSOR CVideoClientDlg::OnQueryDragIcon()
 
 void CVideoClientDlg::OnTimer(UINT_PTR nIDEvent)
 {
-	// TODO: Add your message handler code here and/or call default
-
+	if (nIDEvent == 0)
+	{
+		// TODO controller get position and media info
+		// TODO IDC_STATIC_VOLUME update volume
+		// TODO IDC_STATIC_TIME update time
+	}
 	CDialogEx::OnTimer(nIDEvent);
 }
 
@@ -131,26 +147,29 @@ void CVideoClientDlg::OnTimer(UINT_PTR nIDEvent)
 void CVideoClientDlg::OnDestroy()
 {
 	CDialogEx::OnDestroy();
-
+	KillTimer(0);
 }
 
 
 void CVideoClientDlg::OnBnClickedBtnStop()
 {
+	m_isPlaying = false;
+	m_btnPlay.SetWindowTextW(L"Play");
 }
 
 void CVideoClientDlg::OnBnClickedBtnPlay()
 {
-	static bool isPlaying = false;
-	if (!isPlaying)
+	if (!m_isPlaying)
 	{
 		m_btnPlay.SetWindowTextW(L"Play");
-		isPlaying = true;
+		// TODO controller play
+		m_isPlaying = true;
 	}
 	else
 	{
 		m_btnPlay.SetWindowTextW(L"Pause");
-		isPlaying = false;
+		// TODO controller pause
+		m_isPlaying = false;
 	}
 }
 

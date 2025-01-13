@@ -1,6 +1,6 @@
 # Configuration:
 
-`x86`
+Architecture : `x86`
 
 Choose this: `Properties -> VC Directories -> include direcotries (this way is adding to env path)`
 

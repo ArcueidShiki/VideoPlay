@@ -27,6 +27,7 @@ public:
 protected:
 	HICON m_hIcon;
 	CRect m_lastRect;
+	bool m_isPlaying;
 	typedef int CONTROL_ID;
 	std::map<CONTROL_ID, CRect> m_controlRects;
 	// Generated message map functions
