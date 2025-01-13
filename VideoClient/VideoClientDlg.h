@@ -27,6 +27,7 @@ public:
 protected:
 	HICON m_hIcon;
 	CRect m_lastRect;
+	bool m_isPlaying;
 	typedef int CONTROL_ID;
 	std::map<CONTROL_ID, CRect> m_controlRects;
 	// Generated message map functions
@@ -45,4 +46,6 @@ public:
 	afx_msg void OnBnClickedBtnPlay();
 	CButton m_btnPlay;
 	afx_msg void OnSize(UINT nType, int cx, int cy);
+	afx_msg void OnNMReleasedcaptureSliderPos(NMHDR* pNMHDR, LRESULT* pResult);
+	afx_msg void OnNMReleasedcaptureSliderVolume(NMHDR* pNMHDR, LRESULT* pResult);
 };
