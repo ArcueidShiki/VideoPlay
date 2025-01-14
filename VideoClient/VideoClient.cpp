@@ -5,7 +5,7 @@
 #include "pch.h"
 #include "framework.h"
 #include "VideoClient.h"
-#include "VideoClientDlg.h"
+#include "VideoClientController.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -71,9 +71,9 @@ BOOL CVideoClientApp::InitInstance()
 	// such as the name of your company or organization
 	SetRegistryKey(_T("Local AppWizard-Generated Applications"));
 
-	CVideoClientDlg dlg;
-	m_pMainWnd = &dlg;
-
+	CVideoClientController controller;
+	controller.Init(&m_pMainWnd);
+	controller.Invoke();
 
 	// Delete the shell manager created above.
 	if (pShellManager != nullptr)

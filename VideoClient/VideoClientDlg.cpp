@@ -13,10 +13,7 @@
 #define new DEBUG_NEW
 #endif
 
-
 // CVideoClientDlg dialog
-
-
 
 CVideoClientDlg::CVideoClientDlg(CWnd* pParent /*=nullptr*/)
 	: CDialogEx(IDD_VIDEOCLIENT_DIALOG, pParent)
@@ -50,6 +47,7 @@ BEGIN_MESSAGE_MAP(CVideoClientDlg, CDialogEx)
 	ON_WM_HSCROLL()
 	ON_WM_VSCROLL()
 	ON_WM_HSCROLL()
+	ON_NOTIFY(NM_RELEASEDCAPTURE, IDC_SLIDER_POS, &CVideoClientDlg::OnNMReleasedcaptureSliderPos)
 END_MESSAGE_MAP()
 
 
@@ -86,14 +84,17 @@ BOOL CVideoClientDlg::OnInitDialog()
 		}
 	}
 	SetTimer(0, 500, NULL);
-	m_pos.SetRange(0, 100, true);
+	m_pos.SetRange(0, 1);
 	m_pos.SetPos(0);
 	m_volume.SetRange(0, 100);
 	m_volume.SetPos(100);
-	m_volume.SetTic(10);
 	m_volume.SetTicFreq(20);
 	SetDlgItemText(IDC_STATIC_VOLUME, L"100%");
 	SetDlgItemText(IDC_STATIC_TIME, L"00:00:00/00:00:00");
+	m_controller->SetWnd(m_video.GetSafeHwnd());
+	m_url.SetWindowTextW(_T("file:///E:\\GitHubBase\\projects\\VideoPlay\\resources\\¡¾FSF¡¿¼ª¶ûÙ¤ÃÀÊ² vs ¶÷Ææ¶¼.mp4"));
+	m_btnPlay.SetWindowTextW(L"Play");
+
 	//ShowWindow(SW_MAXIMIZE);
 	//ShowWindow(SW_MINIMIZE);
 
@@ -142,15 +143,23 @@ void CVideoClientDlg::OnTimer(UINT_PTR nIDEvent)
 {
 	if (nIDEvent == 0)
 	{
-		double pos = m_controller->VideoCtrl(VLC_GET_POSITION);
+		float pos = m_controller->VideoCtrl(VLC_GET_POSITION);
 		if (pos != -1.0f)
 		{
-			m_timeStr.Format(L"%d%%", static_cast<int>(pos * 100));
-			m_pos.SetPos(static_cast<int>(pos * 100));
+			if (m_total <= 0.0f)
+			{
+				m_total = m_controller->VideoCtrl(VLC_GET_TOTAL);
+			}
+			// initialize m_pos slider bar
+			if (m_pos.GetRangeMax() <= 1)
+			{
+				m_pos.SetRange(0, (int)m_total);
+			}
+			// TODO 100% display may have issues
+			m_timeStr.Format(L"%f%%", pos / m_total * 100);
+			m_pos.SetPos(static_cast<int>(pos * m_total));
+			UpdateData(FALSE);
 		}
-		// TODO controller get position and media info
-		// TODO IDC_STATIC_VOLUME update volume
-		// TODO IDC_STATIC_TIME update time
 	}
 	CDialogEx::OnTimer(nIDEvent);
 }
@@ -176,17 +185,16 @@ void CVideoClientDlg::OnBnClickedBtnPlay()
 	{
 		CString url;
 		m_url.GetWindowText(url);
-		// TODO check
 		m_controller->SetMedia(m_controller->Unicode2Utf8(url.GetString()));
-		m_btnPlay.SetWindowTextW(L"Play");
 		m_controller->VideoCtrl(VLC_PLAY);
 		m_isPlaying = true;
+		m_btnPlay.SetWindowTextW(L"Pause");
 	}
 	else
 	{
-		m_btnPlay.SetWindowTextW(L"Pause");
 		m_controller->VideoCtrl(VLC_PAUSE);
 		m_isPlaying = false;
+		m_btnPlay.SetWindowTextW(L"Play");
 	}
 }
 
@@ -215,6 +223,7 @@ void CVideoClientDlg::OnSize(UINT nType, int cx, int cy)
 			pControl->MoveWindow(newRect);
 		}
 	}
+	m_controller->VideoCtrl(VLC_UPDATE_SIZE);
 }
 
 
@@ -222,22 +231,29 @@ void CVideoClientDlg::OnHScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBar)
 {
 	if (pScrollBar == (CScrollBar*)&m_pos)
 	{
-		int pos = m_pos.GetPos();
-		//TRACE(L"Position nSBCode:[%u], nPos:[%u], m_pos.GetPos():[%d], pScrollBar:[%p] Scroll\n", nSBCode, nPos, pos, pScrollBar);
-		m_timeStr.Format(L"%d%%", pos);
-		//SetDlgItemText(IDC_STATIC_TIME, posStr);
-		m_controller->SetPosition((float)pos);
+		float percent = m_pos.GetPos() / m_total;
+		m_timeStr.Format(L"%f%%", percent * 100);
+		m_controller->SetPosition(percent);
 		UpdateData(FALSE);
+		//SetDlgItemText(IDC_STATIC_TIME, posStr);
+		//TRACE(L"Position nSBCode:[%u], nPos:[%u], m_pos.GetPos():[%d], pScrollBar:[%p] Scroll\n", nSBCode, nPos, m_pos.GetPos(), pScrollBar);
 	}
 	else if (pScrollBar == (CScrollBar*)&m_volume)
 	{
 		int volume = m_volume.GetPos();
-		//TRACE(L"Volume nSBCode:[%u], nPos:[%u], pScrollBar:[%p] Scroll\n", nSBCode, nPos, pScrollBar);
 		m_volStr.Format(L"%d%%", volume);
 		SetDlgItemText(IDC_STATIC_VOLUME, m_volStr);
 		m_controller->SetVolume(volume);
+		//TRACE(L"Volume nSBCode:[%u], nPos:[%u], pScrollBar:[%p] Scroll\n", nSBCode, nPos, pScrollBar);
 	}
 	else {
 		CDialogEx::OnHScroll(nSBCode, nPos, pScrollBar);
 	}
+}
+
+void CVideoClientDlg::OnNMReleasedcaptureSliderPos(NMHDR* pNMHDR, LRESULT* pResult)
+{
+	m_controller->VideoCtrl(VLC_PLAY);
+	m_btnPlay.SetWindowTextW(L"Pause");
+	*pResult = 0;
 }

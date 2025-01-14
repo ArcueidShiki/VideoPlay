@@ -1,6 +1,6 @@
 #pragma once
-#include <vlc.h>
 #include <string>
+#include <vlc.h>
 
 class VlcSize
 {
@@ -18,7 +18,9 @@ public:
 	~CVlc();
 	// strUrl : unicode(wbs/wchar_t) to utf8 string(mbs)
 	int SetMedia(const std::string& strUrl);
+#ifdef WIN32
 	int SetHwnd(HWND hWnd);
+#endif
 	bool IsValid();
 	int Play();
 	int Pause();
@@ -27,11 +29,18 @@ public:
 	void SetPosition(float pos);
 	int GetVolume();
 	void SetVolume(int vol);
+	float GetTotal();
+	void UpdateSize();
 	VlcSize GetMediaInfo();
 	std::string Unicode2Utf8(const std::wstring& wstr);
 protected:
 	libvlc_instance_t* m_instance;
 	libvlc_media_t* m_media;
 	libvlc_media_player_t* m_player;
+	std::string m_url;
+	CRect m_rect;
+#ifdef WIN32
+	HWND m_hWnd;
+#endif
 };
 
