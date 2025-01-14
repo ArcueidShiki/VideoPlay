@@ -51,6 +51,8 @@ float CVideoClientController::VideoCtrl(EVlcCommand cmd)
 		case VLC_STOP: return (float)m_vlc.Stop();
 		case VLC_GET_POSITION: return m_vlc.GetPosition();
 		case VLC_SET_VOLUME: return (float)m_vlc.GetVolume();
+		case VLC_GET_TOTAL: return m_vlc.GetTotal();
+		case VLC_UPDATE_SIZE: m_vlc.UpdateSize(); return 0.0f;
 		default:break;
 	}
 	return -1.0f;

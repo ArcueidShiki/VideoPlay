@@ -52,7 +52,10 @@ protected:
 	CEdit m_url;
 	HICON m_hIcon;
 	CRect m_lastRect;
+	float m_total;
 	bool m_isPlaying;
 	typedef int CONTROL_ID;
 	std::map<CONTROL_ID, CRect> m_controlRects;
+public:
+	afx_msg void OnNMReleasedcaptureSliderPos(NMHDR* pNMHDR, LRESULT* pResult);
 };
