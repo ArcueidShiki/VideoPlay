@@ -5,6 +5,8 @@
 #pragma once
 #include <map>
 #include <string>
+class CVideoClientController;
+
 // CVideoClientDlg dialog
 class CVideoClientDlg : public CDialogEx
 {
@@ -22,31 +24,35 @@ public:
 
 
 // Implementation
-	
+public:
+	afx_msg void OnTimer(UINT_PTR nIDEvent);
+	afx_msg void OnDestroy();
+	afx_msg void OnBnClickedBtnStop();
+	afx_msg void OnBnClickedBtnPlay();
+	afx_msg void OnSize(UINT nType, int cx, int cy);
+	afx_msg void OnHScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBar);
 
 protected:
-	HICON m_hIcon;
-	CRect m_lastRect;
-	bool m_isPlaying;
-	typedef int CONTROL_ID;
-	std::map<CONTROL_ID, CRect> m_controlRects;
 	// Generated message map functions
 	virtual BOOL OnInitDialog();
 	afx_msg void OnPaint();
 	afx_msg HCURSOR OnQueryDragIcon();
 	DECLARE_MESSAGE_MAP()
+
 public:
-	afx_msg void OnTimer(UINT_PTR nIDEvent);
-	afx_msg void OnDestroy();
-	afx_msg void OnBnClickedBtnStop();
+	CVideoClientController* m_controller;
+
+protected:
+	CString m_volStr;
+	CString m_timeStr;
+	CButton m_btnPlay;
 	CEdit m_video;
 	CSliderCtrl m_pos;
 	CSliderCtrl m_volume;
 	CEdit m_url;
-	afx_msg void OnBnClickedBtnPlay();
-	CButton m_btnPlay;
-	afx_msg void OnSize(UINT nType, int cx, int cy);
-	afx_msg void OnHScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBar);
-	CString m_volValue;
-	CString m_timeVal;
+	HICON m_hIcon;
+	CRect m_lastRect;
+	bool m_isPlaying;
+	typedef int CONTROL_ID;
+	std::map<CONTROL_ID, CRect> m_controlRects;
 };
