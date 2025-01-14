@@ -46,4 +46,7 @@ public:
 	afx_msg void OnBnClickedBtnPlay();
 	CButton m_btnPlay;
 	afx_msg void OnSize(UINT nType, int cx, int cy);
+	afx_msg void OnHScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBar);
+	CString m_volValue;
+	CString m_timeVal;
 };
