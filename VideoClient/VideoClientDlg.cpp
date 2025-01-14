@@ -19,6 +19,8 @@
 
 CVideoClientDlg::CVideoClientDlg(CWnd* pParent /*=nullptr*/)
 	: CDialogEx(IDD_VIDEOCLIENT_DIALOG, pParent)
+	, m_volValue(_T(""))
+	, m_timeVal(_T(""))
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 	m_isPlaying = false;
@@ -32,6 +34,8 @@ void CVideoClientDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_EDIT_URL, m_url);
 	DDX_Control(pDX, IDC_BTN_PLAY, m_btnPlay);
 	DDX_Control(pDX, IDC_SLIDER_POS, m_pos);
+	DDX_Text(pDX, IDC_STATIC_VOLUME, m_volValue);
+	DDX_Text(pDX, IDC_STATIC_TIME, m_timeVal);
 }
 
 BEGIN_MESSAGE_MAP(CVideoClientDlg, CDialogEx)
@@ -44,6 +48,7 @@ BEGIN_MESSAGE_MAP(CVideoClientDlg, CDialogEx)
 	ON_WM_SIZE()
 	ON_WM_HSCROLL()
 	ON_WM_VSCROLL()
+	ON_WM_HSCROLL()
 END_MESSAGE_MAP()
 
 
@@ -80,11 +85,11 @@ BOOL CVideoClientDlg::OnInitDialog()
 		}
 	}
 	SetTimer(0, 500, NULL);
-	m_pos.ContinueModal();
-	m_pos.SetRange(0, 100);
+	m_pos.SetRange(0, 100, true);
+	m_pos.SetPos(0);
 	m_volume.SetRange(0, 100);
+	m_volume.SetPos(100);
 	m_volume.SetTic(10);
-	//m_volume.SetTic(100);
 	m_volume.SetTicFreq(20);
 	SetDlgItemText(IDC_STATIC_VOLUME, L"100%");
 	SetDlgItemText(IDC_STATIC_TIME, L"00:00:00/00:00:00");
@@ -183,7 +188,6 @@ void CVideoClientDlg::OnSize(UINT nType, int cx, int cy)
 	float xRatio = static_cast<float>(clientRect.Width()) / m_lastRect.Width();
 	float yRatio = static_cast<float>(clientRect.Height()) / m_lastRect.Height();
 
-	// 调整所有控件的大小和位置
 	for (const auto& pair : m_controlRects)
 	{
 		int id = pair.first;
@@ -198,5 +202,28 @@ void CVideoClientDlg::OnSize(UINT nType, int cx, int cy)
 			newRect.bottom = static_cast<int>(lastRect.bottom * yRatio);
 			pControl->MoveWindow(newRect);
 		}
+	}
+}
+
+
+void CVideoClientDlg::OnHScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBar)
+{
+	if (pScrollBar == (CScrollBar*)&m_pos)
+	{
+		int pos = m_pos.GetPos();
+		//TRACE(L"Position nSBCode:[%u], nPos:[%u], pScrollBar:[%p] Scroll\n", nSBCode, nPos, pScrollBar);
+		m_timeVal.Format(L"%d%%", pos);
+		//SetDlgItemText(IDC_STATIC_TIME, posStr);
+		UpdateData(FALSE);
+	}
+	else if (pScrollBar == (CScrollBar*)&m_volume)
+	{
+		int volume = m_volume.GetPos();
+		//TRACE(L"Volume nSBCode:[%u], nPos:[%u], pScrollBar:[%p] Scroll\n", nSBCode, nPos, pScrollBar);
+		m_volValue.Format(L"%d%%", volume);
+		SetDlgItemText(IDC_STATIC_VOLUME, m_volValue);
+	}
+	else {
+		CDialogEx::OnHScroll(nSBCode, nPos, pScrollBar);
 	}
 }
