@@ -7,6 +7,7 @@
 #include "VideoClient.h"
 #include "VideoClientDlg.h"
 #include "afxdialogex.h"
+#include "VideoClientController.h"
 #include <vector>
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -19,8 +20,8 @@
 
 CVideoClientDlg::CVideoClientDlg(CWnd* pParent /*=nullptr*/)
 	: CDialogEx(IDD_VIDEOCLIENT_DIALOG, pParent)
-	, m_volValue(_T(""))
-	, m_timeVal(_T(""))
+	, m_volStr(_T(""))
+	, m_timeStr(_T(""))
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 	m_isPlaying = false;
@@ -34,8 +35,8 @@ void CVideoClientDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_EDIT_URL, m_url);
 	DDX_Control(pDX, IDC_BTN_PLAY, m_btnPlay);
 	DDX_Control(pDX, IDC_SLIDER_POS, m_pos);
-	DDX_Text(pDX, IDC_STATIC_VOLUME, m_volValue);
-	DDX_Text(pDX, IDC_STATIC_TIME, m_timeVal);
+	DDX_Text(pDX, IDC_STATIC_VOLUME, m_volStr);
+	DDX_Text(pDX, IDC_STATIC_TIME, m_timeStr);
 }
 
 BEGIN_MESSAGE_MAP(CVideoClientDlg, CDialogEx)
@@ -141,6 +142,12 @@ void CVideoClientDlg::OnTimer(UINT_PTR nIDEvent)
 {
 	if (nIDEvent == 0)
 	{
+		double pos = m_controller->VideoCtrl(VLC_GET_POSITION);
+		if (pos != -1.0f)
+		{
+			m_timeStr.Format(L"%d%%", static_cast<int>(pos * 100));
+			m_pos.SetPos(static_cast<int>(pos * 100));
+		}
 		// TODO controller get position and media info
 		// TODO IDC_STATIC_VOLUME update volume
 		// TODO IDC_STATIC_TIME update time
@@ -160,20 +167,25 @@ void CVideoClientDlg::OnBnClickedBtnStop()
 {
 	m_isPlaying = false;
 	m_btnPlay.SetWindowTextW(L"Play");
+	m_controller->VideoCtrl(VLC_STOP);
 }
 
 void CVideoClientDlg::OnBnClickedBtnPlay()
 {
 	if (!m_isPlaying)
 	{
+		CString url;
+		m_url.GetWindowText(url);
+		// TODO check
+		m_controller->SetMedia(m_controller->Unicode2Utf8(url.GetString()));
 		m_btnPlay.SetWindowTextW(L"Play");
-		// TODO controller play
+		m_controller->VideoCtrl(VLC_PLAY);
 		m_isPlaying = true;
 	}
 	else
 	{
 		m_btnPlay.SetWindowTextW(L"Pause");
-		// TODO controller pause
+		m_controller->VideoCtrl(VLC_PAUSE);
 		m_isPlaying = false;
 	}
 }
@@ -211,17 +223,19 @@ void CVideoClientDlg::OnHScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBar)
 	if (pScrollBar == (CScrollBar*)&m_pos)
 	{
 		int pos = m_pos.GetPos();
-		//TRACE(L"Position nSBCode:[%u], nPos:[%u], pScrollBar:[%p] Scroll\n", nSBCode, nPos, pScrollBar);
-		m_timeVal.Format(L"%d%%", pos);
+		//TRACE(L"Position nSBCode:[%u], nPos:[%u], m_pos.GetPos():[%d], pScrollBar:[%p] Scroll\n", nSBCode, nPos, pos, pScrollBar);
+		m_timeStr.Format(L"%d%%", pos);
 		//SetDlgItemText(IDC_STATIC_TIME, posStr);
+		m_controller->SetPosition((float)pos);
 		UpdateData(FALSE);
 	}
 	else if (pScrollBar == (CScrollBar*)&m_volume)
 	{
 		int volume = m_volume.GetPos();
 		//TRACE(L"Volume nSBCode:[%u], nPos:[%u], pScrollBar:[%p] Scroll\n", nSBCode, nPos, pScrollBar);
-		m_volValue.Format(L"%d%%", volume);
-		SetDlgItemText(IDC_STATIC_VOLUME, m_volValue);
+		m_volStr.Format(L"%d%%", volume);
+		SetDlgItemText(IDC_STATIC_VOLUME, m_volStr);
+		m_controller->SetVolume(volume);
 	}
 	else {
 		CDialogEx::OnHScroll(nSBCode, nPos, pScrollBar);

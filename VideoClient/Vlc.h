@@ -28,6 +28,7 @@ public:
 	int GetVolume();
 	void SetVolume(int vol);
 	VlcSize GetMediaInfo();
+	std::string Unicode2Utf8(const std::wstring& wstr);
 protected:
 	libvlc_instance_t* m_instance;
 	libvlc_media_t* m_media;

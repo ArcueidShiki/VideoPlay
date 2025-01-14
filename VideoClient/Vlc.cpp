@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "Vlc.h"
+#include <codecvt>
 
 VlcSize::VlcSize(int width, int height)
 	: nWidth(width)
@@ -121,4 +122,10 @@ VlcSize CVlc::GetMediaInfo()
 	int width = libvlc_video_get_width(m_player);
 	int height = libvlc_video_get_height(m_player);
 	return VlcSize(width, height);
+}
+
+std::string CVlc::Unicode2Utf8(const std::wstring& wstr)
+{
+	std::wstring_convert<std::codecvt_utf8<wchar_t>> conv;
+	return conv.to_bytes(wstr);
 }
