@@ -76,9 +76,11 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
+    <IncludePath>../ThirdParty/vlc/include/vlc;../ThirdParty/vlc/include;.;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
+    <IncludePath>../ThirdParty/vlc/include/vlc;../ThirdParty/vlc/include;.;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -96,6 +98,7 @@
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
+      <AdditionalDependencies>../ThirdParty/vlc/lib/libvlc.lib;../ThirdParty/vlc/lib/libvlccore.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>
@@ -118,6 +121,7 @@
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
+      <AdditionalDependencies>../ThirdParty/vlc/lib/libvlc.lib;../ThirdParty/vlc/lib/libvlccore.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>
@@ -189,6 +193,7 @@
     <ClInclude Include="targetver.h" />
     <ClInclude Include="VideoClient.h" />
     <ClInclude Include="VideoClientDlg.h" />
+    <ClInclude Include="Vlc.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
@@ -199,6 +204,7 @@
     </ClCompile>
     <ClCompile Include="VideoClient.cpp" />
     <ClCompile Include="VideoClientDlg.cpp" />
+    <ClCompile Include="Vlc.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="VideoClient.rc" />
