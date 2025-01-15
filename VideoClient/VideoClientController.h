@@ -10,7 +10,6 @@ enum EVlcCommand
 	VLC_GET_POSITION,
 	VLC_SET_VOLUME,
 	VLC_GET_TOTAL,
-	VLC_UPDATE_SIZE,
 };
 
 class CVideoClientController
