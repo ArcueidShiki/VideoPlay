@@ -46,13 +46,14 @@ protected:
 	CString m_volStr;
 	CString m_timeStr;
 	CButton m_btnPlay;
-	CEdit m_video;
+	CStatic m_video;
 	CSliderCtrl m_pos;
 	CSliderCtrl m_volume;
 	CEdit m_url;
 	HICON m_hIcon;
 	CRect m_lastRect;
-	float m_total;
+	float m_total; // seconds, not milliseconds
+	TCHAR m_totalStr[32];
 	bool m_isPlaying;
 	typedef int CONTROL_ID;
 	std::map<CONTROL_ID, CRect> m_controlRects;

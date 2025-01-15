@@ -148,21 +148,6 @@ float CVlc::GetTotal()
 	return libvlc_media_player_get_length(m_player) / 1000.0f;
 }
 
-void CVlc::UpdateSize()
-{
-	CRect rect;
-	GetWindowRect(m_hWnd, &rect);
-	if (rect.Width() != m_rect.Width() || rect.Height() != m_rect.Height())
-	{
-		std::string strRatio = "";
-		strRatio.resize(32);
-		sprintf_s((char*)strRatio.c_str(), 32, "%d:%d", m_rect.Width(), m_rect.Height());
-		libvlc_video_set_aspect_ratio(m_player, strRatio.c_str());
-		libvlc_media_player_set_hwnd(m_player, m_hWnd);
-		m_rect = rect;
-	}
-}
-
 VlcSize CVlc::GetMediaInfo()
 {
 	if (!IsValid()) return VlcSize(-1, -1);

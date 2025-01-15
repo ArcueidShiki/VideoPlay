@@ -30,7 +30,6 @@ public:
 	int GetVolume();
 	void SetVolume(int vol);
 	float GetTotal();
-	void UpdateSize();
 	VlcSize GetMediaInfo();
 	std::string Unicode2Utf8(const std::wstring& wstr);
 protected:
