@@ -87,9 +87,7 @@ void CThread::ThreadWorker()
 				int ret = (*pWorker)();
 				if (ret != 0)
 				{
-					//CString str;
-					//str.Format(_T("Thread found warning code %d\r\n"), ret);
-					//OutputDebugString(str);
+					TRACE("ThreadWorker found warnning code %d\n", ret);
 				}
 				if (ret < 0)
 				{
