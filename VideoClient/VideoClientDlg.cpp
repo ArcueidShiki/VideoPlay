@@ -139,11 +139,12 @@ HCURSOR CVideoClientDlg::OnQueryDragIcon()
 }
 
 
-
 void CVideoClientDlg::OnTimer(UINT_PTR nIDEvent)
 {
 	if (nIDEvent == 0)
 	{
+		// TODO, Check if the resource is loaded
+		// else do nothing.
 		float pos = m_controller->VideoCtrl(VLC_GET_POSITION);
 		if (pos != -1.0f)
 		{
@@ -182,9 +183,12 @@ void CVideoClientDlg::OnDestroy()
 void CVideoClientDlg::OnBnClickedBtnStop()
 {
 	m_isPlaying = false;
-	m_btnPlay.SetWindowTextW(L"Play");
 	m_controller->VideoCtrl(VLC_STOP);
 	m_controller->SetPosition(0.0f);
+	m_btnPlay.SetWindowTextW(L"Play");
+	m_pos.SetPos(0);
+	m_total = 0.0f;
+	m_timeStr.Format(L"00:00:00 / 00:00:00");
 }
 
 void CVideoClientDlg::OnBnClickedBtnPlay()
