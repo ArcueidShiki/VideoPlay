@@ -1,4 +1,5 @@
 #pragma once
+#include <Windows.h>
 #include <atomic>
 #include <vector>
 #include <mutex>
@@ -6,18 +7,9 @@
 #include <varargs.h>
 #include <cstdarg>
 
-void Trace(const char* fmt, ...)
-{
-	va_list args;
-	va_start(args, fmt);
-	std::string sBuffer;
-	sBuffer.resize(1024 * 10);
-	vsprintf((char*)(sBuffer.c_str()), fmt, args);
-	va_end(args);
-}
-
 #ifndef TRACE
 #define TRACE Trace
+void Trace(const char* fmt, ...);
 #endif
 
 class CThread

@@ -4,6 +4,15 @@
 #include <synchapi.h>
 #include <winerror.h>
 
+void Trace(const char* fmt, ...)
+{
+	va_list args;
+	va_start(args, fmt);
+	char buf[10240];
+	vsprintf_s(buf, fmt, args);
+	va_end(args);
+}
+
 CThread::CThread()
 {
 	m_aRunning.store(false);
