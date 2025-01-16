@@ -1,9 +1,11 @@
 #pragma once
-
+#include <memory>
 #include <WinSock2.h>
 #include <WS2tcpip.h>
 #include <string>
 
+// don't forget this
+#pragma comment(lib, "Ws2_32.lib")
 class Buffer : public std::string
 {
 public:
@@ -27,7 +29,7 @@ public:
 		std::string::~basic_string();
 	}
 
-	operator char* ()
+	operator char* () const
 	{
 		return const_cast<char*>(c_str());
 	}
@@ -52,6 +54,44 @@ public:
 	{
 		resize(size);
 		memcpy((void*)data(), buf, size);
+	}
+	Buffer& operator<<(const Buffer& data)
+	{
+		if (this != &data)
+		{
+			*this += data;
+		}
+		else
+		{
+			Buffer tmp = data;
+			*this += tmp;
+		}
+		return *this;
+	}
+
+	Buffer& operator<<(const std::string str)
+	{
+		*this += str;
+		return *this;
+	}
+
+	Buffer& operator<<(const char *str)
+	{
+		*this += str;
+		return *this;
+	}
+
+	Buffer& operator<<(int data)
+	{
+		char s[16];
+		sprintf_s(s, "%d", data);
+		*this += s;
+		return *this;
+	}
+	const Buffer& operator>>(USHORT& data) const
+	{
+		data = (USHORT)atoi(c_str());
+		return *this;
 	}
 };
 
@@ -151,14 +191,13 @@ public:
 	{
 		m_socket.reset();
 	}
-	operator SOCKET()
+	operator SOCKET() const
 	{
 		return (SOCKET)*m_socket;
 	}
 	SPSocket(const SPSocket& other)
 	{
-		// TODO problems
-		m_socket = std::make_shared <Socket>(other);
+		m_socket = std::make_shared<Socket>((SOCKET)other);
 		m_isTCP = other.m_isTCP;
 	}
 	SPSocket& operator=(const SPSocket& other)
@@ -212,8 +251,22 @@ public:
 
 	int Send(const Buffer& buffer)
 	{
-		// TODO optimize, when buffer is long
-		return send(*m_socket, buffer, buffer.size(), 0);
+		size_t index = 0;
+		char* pData = buffer;
+		while (index < buffer.size())
+		{
+			int ret = send(*m_socket, pData + index, buffer.size() - index, 0);
+			if (ret < 0)
+			{
+				return ret;
+			}
+			if (ret == 0)
+			{
+				break;
+			}
+			index += ret;
+		}
+		return index;
 	}
 private:
 	std::shared_ptr<Socket> m_socket;
