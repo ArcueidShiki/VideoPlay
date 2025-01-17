@@ -93,7 +93,9 @@ BOOL CVideoClientDlg::OnInitDialog()
 	m_timeStr.Format(L"00:00:00 / 00:00:00");
 	m_volStr.Format(L"100%%");
 	m_controller->SetWnd(m_video.GetSafeHwnd());
-	m_url.SetWindowTextW(_T("file:///E:\\GitHubBase\\projects\\VideoPlay\\resources\\¡¾FSF¡¿¼ª¶ûÙ¤ÃÀÊ² vs ¶÷Ææ¶¼.mp4"));
+	//m_url.SetWindowTextW(_T("file:///E:\\GitHubBase\\projects\\VideoPlay\\resources\\¡¾FSF¡¿¼ª¶ûÙ¤ÃÀÊ² vs ¶÷Ææ¶¼.mp4"));
+	m_url.SetWindowText(_T("rtsp://127.0.0.1:8554"));
+	//m_url.SetWindowTextW(_T("file:///E:\\bilibiliÒôÀÖ\\milet - SEVENTH HEAVEN¡¾JP - ENG - ROMAJI¡¿.mp3"));
 	m_btnPlay.SetWindowTextW(L"Play");
 
 	//ShowWindow(SW_MAXIMIZE);
