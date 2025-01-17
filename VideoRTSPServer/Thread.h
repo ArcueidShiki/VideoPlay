@@ -4,13 +4,6 @@
 #include <vector>
 #include <mutex>
 #include "ThreadWorker.h"
-#include <varargs.h>
-#include <cstdarg>
-
-#ifndef TRACE
-#define TRACE Trace
-void Trace(const char* fmt, ...);
-#endif
 
 class CThread
 {

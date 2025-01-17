@@ -57,7 +57,6 @@ int ThreadWorker::operator()() const
 {
 	if (IsValid()) {
 		int ret = (base->*func)();
-		//TRACE("Worker work result = %d\n", ret);
 		return ret;
 	}
 	return -1;
