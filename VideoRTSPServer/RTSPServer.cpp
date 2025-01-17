@@ -1,4 +1,5 @@
 #include "RTSPServer.h"
+#include "Utils.h"
 // uuid
 #pragma comment(lib, "Rpcrt4.lib")
 constexpr const char *OPTIONS = "OPTIONS";
