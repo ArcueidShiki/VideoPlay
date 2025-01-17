@@ -2,6 +2,8 @@
 #include "Socket.h"
 #include "ThreadPool.h"
 #include "Queue.h"
+#include "RTPHelper.h"
+#include "MediaFile.h"
 #include <string>
 #include <map>
 #include <rpc.h>
@@ -77,6 +79,9 @@ private:
 	Buffer m_seq;
 };
 
+class RTSPSession;
+class RTSPServer;
+using RTSP_PLAY_CALLBACK = void(*)(RTSPServer* obj, RTSPSession& session);
 class RTSPSession
 {
 public:
@@ -84,8 +89,9 @@ public:
 	RTSPSession(const SPSocket& client);
 	RTSPSession(const RTSPSession& other);
 	RTSPSession& operator=(const RTSPSession& other);
-	int ResponseRequest();
+	int ResponseRequest(RTSP_PLAY_CALLBACK callback, RTSPServer* obj);
 	~RTSPSession() {}
+	Address GetClientUDPAddress() const;
 private:
 	Buffer Pick();
 	Buffer PickLine(Buffer& buffer);
@@ -94,6 +100,7 @@ private:
 private:
 	Buffer m_id;
 	SPSocket m_client;
+	USHORT m_port;
 };
 
 class RTSPServer : public ThreadFuncBase
@@ -107,6 +114,8 @@ public:
 protected:
 	int ThreadWorker();
 	int ThreadSession();
+	static void PlayCallback(RTSPServer* obj, RTSPSession& session);
+	void UdpWorker(const Address &clientAddr);
 private:
 	ServerStatus m_status;
 	Address m_addr;
@@ -117,5 +126,7 @@ private:
 	CQueue<RTSPSession> m_qSessions;
 	::ThreadWorker m_workerMain;
 	::ThreadWorker m_workerSession;
+	RTPHelper m_helper;
+	MediaFile m_h264;
 };
 

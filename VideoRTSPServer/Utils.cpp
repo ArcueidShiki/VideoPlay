@@ -1,5 +1,4 @@
 #include "Utils.h"
-#include <varargs.h>
 #include <cstdarg>
 
 void Trace(const char* fmt, ...)

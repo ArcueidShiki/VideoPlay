@@ -5,9 +5,6 @@
 #include <string>
 #include "Utils.h"
 
-// don't forget this
-#pragma comment(lib, "Ws2_32.lib")
-
 class Address
 {
 public:
@@ -22,6 +19,13 @@ public:
 		m_strIP = other.m_strIP;
 		m_port = other.m_port;
 		m_addr = other.m_addr;
+	}
+	Address(const std::string& strIP, USHORT port)
+	{
+		m_strIP = strIP;
+		m_port = port;
+		m_addr.sin_port = htons(m_port);
+		inet_pton(AF_INET, m_strIP.c_str(), &m_addr.sin_addr);
 	}
 	Address& operator=(const Address& other)
 	{
@@ -54,6 +58,12 @@ public:
 		return (sockaddr*)&m_addr;
 	}
 	int size() const { return sizeof(sockaddr_in); }
+	Address Setoport(USHORT port)
+	{
+		m_port = port;
+		m_addr.sin_port = htons(port);
+		return *this;
+	}
 private:
 	std::string m_strIP;
 	USHORT m_port;

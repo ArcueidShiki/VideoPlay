@@ -31,6 +31,7 @@ int RTSPServer::Invoke()
 	m_pool.Invoke();
 	m_workerMain = ::ThreadWorker(this, (FUNC)&RTSPServer::ThreadWorker);
 	m_pool.DispatchWorker(m_workerMain);
+	m_h264.Open("./test.h264");
 	return 0;
 }
 
@@ -68,13 +69,31 @@ int RTSPServer::ThreadSession()
 	RTSPSession session;
 	if (m_qSessions.PopFront(session))
 	{
-		return session.ResponseRequest();
+		int ret = session.ResponseRequest(RTSPServer::PlayCallback, this);
+		return ret;
 	}
 	return 0;
 }
 
+void RTSPServer::PlayCallback(RTSPServer* obj, RTSPSession& session)
+{
+	obj->UdpWorker(session.GetClientUDPAddress());
+}
+
+void RTSPServer::UdpWorker(const Address& clientAddr)
+{
+	Buffer frame = m_h264.ReadOneFrame();
+	RTPFrame rtp;
+	while (frame.size() > 0)
+	{
+		m_helper.SendMediaFrame(rtp, frame, clientAddr);
+		frame = m_h264.ReadOneFrame();
+	}
+}
+
 RTSPSession::RTSPSession()
 {
+	m_port = -1;
 	UUID uuid;
 	if (UuidCreate(&uuid) != 0)
 	{
@@ -86,6 +105,7 @@ RTSPSession::RTSPSession()
 
 RTSPSession::RTSPSession(const SPSocket& client)
 {
+	m_port = -1;
 	m_client = client;
 	UUID uuid;
 	if (UuidCreate(&uuid) != 0)
@@ -100,6 +120,7 @@ RTSPSession::RTSPSession(const RTSPSession& other)
 {
 	m_id = other.m_id;
 	m_client = other.m_client;
+	m_port = other.m_port;
 }
 
 RTSPSession& RTSPSession::operator=(const RTSPSession& other)
@@ -112,7 +133,7 @@ RTSPSession& RTSPSession::operator=(const RTSPSession& other)
 	return *this;
 }
 
-int RTSPSession::ResponseRequest()
+int RTSPSession::ResponseRequest(RTSP_PLAY_CALLBACK callback, RTSPServer* obj)
 {
 	int ret = 0;
 	do {
@@ -129,9 +150,23 @@ int RTSPSession::ResponseRequest()
 
 		RTSPResponse response = Response(request);
 		ret = m_client.Send(response.toBuffer());
+		if (request.method() == RTSPMethod::PLAY)
+		{
+			request.port() >> m_port;
+			callback(obj, *this);
+		}
 	} while (ret >= 0);
 	if (ret < 0) return ret;
 	return ret;
+}
+
+Address RTSPSession::GetClientUDPAddress() const
+{
+	Address addr;
+	int len = addr.size();
+	getsockname(m_client, (SOCKADDR*)addr, &len);
+	addr.Setoport(m_port);
+	return addr;
 }
 
 Buffer RTSPSession::Pick()
@@ -297,6 +332,7 @@ RTSPResponse RTSPSession::Response(const RTSPRequest& request)
 				<< "t= 0 0\r\n"
 				<< "a=control:*\r\n"
 				<< "m=video 0 RTP/AVP 96\r\n"
+				<< "a=framerate:24\r\n"
 				<< "a=rtpmap:96 H264/90000\r\n"
 				<< "a=control:track0\r\n";
 			response.SetSdp(sdp);

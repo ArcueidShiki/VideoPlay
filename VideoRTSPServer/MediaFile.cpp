@@ -14,7 +14,7 @@ MediaFile::~MediaFile()
 
 int MediaFile::Open(const Buffer& path, FileType type)
 {
-	m_pFile = fopen(path, "rb");
+	fopen_s(&m_pFile, path, "rb");
 	if (!m_pFile)
 	{
 		return -1;

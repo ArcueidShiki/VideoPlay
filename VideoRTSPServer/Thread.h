@@ -1,9 +1,9 @@
 #pragma once
-#include <Windows.h>
 #include <atomic>
 #include <vector>
 #include <mutex>
 #include "ThreadWorker.h"
+#include <Windows.h>
 
 class CThread
 {
