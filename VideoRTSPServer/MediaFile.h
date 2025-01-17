@@ -21,7 +21,7 @@ public:
 	void Reset();	// rewind to the beginning
 private:
 	Buffer ReadH264Frame();
-	long FindH264Head();
+	long FindH264Head(int &headsz);
 private:
 	FILE* m_pFile;
 	Buffer m_filepath;

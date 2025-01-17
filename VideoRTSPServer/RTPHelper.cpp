@@ -18,17 +18,17 @@ int RTPHelper::SendMediaFrame(RTPFrame &rtpframe, Buffer& frame, const Address& 
     int headersz = GetFrameHeaderSize(frame);
     framesz -= headersz;
 	BYTE* pFrame = (BYTE*)frame + headersz;
+
     if (framesz > RTP_MAX_PACKET_SIZE)
     {
 		BYTE nalu = pFrame[0] & RTP_LOW_5_BIT;
-        // slice large package
         size_t count = framesz / RTP_MAX_PACKET_SIZE;
         size_t restsz = framesz % RTP_MAX_PACKET_SIZE;
         for (size_t i = 0; i < count; i++)
         {
-            rtpframe.m_payload.resize(RTP_MAX_PACKET_SIZE);
+            rtpframe.m_payload.resize(RTP_MAX_PACKET_SIZE + 2);
             // 28 0x1C, 0110 0000 | 0001 1100
-            ((BYTE*)rtpframe.m_payload)[0] = RTP_HEADER_NO_ERROR | RTP_HEADER_IMPORTANT | RTP_HEADER_TYPE_FUA;
+            ((BYTE*)rtpframe.m_payload)[0] = RTP_HEADER_IMPORTANT | RTP_HEADER_TYPE_FUA;
             ((BYTE*)rtpframe.m_payload)[1] = nalu;
             if (i == 0)
             {
@@ -40,22 +40,24 @@ int RTPHelper::SendMediaFrame(RTPFrame &rtpframe, Buffer& frame, const Address& 
                 //end 0x80: 0100 0000, 1F low 5bit of the first byte 0001 1111
                 ((BYTE*)rtpframe.m_payload)[1] |= RTP_HEADER_END;
             }
-            memcpy((BYTE*)rtpframe.m_payload + 2, pFrame + RTP_MAX_PACKET_SIZE * i, RTP_MAX_PACKET_SIZE);
+			// + 1, becuase pFrame[0] aka nalu is already copied in m_payload[1]
+            memcpy((BYTE*)rtpframe.m_payload + 2, pFrame + RTP_MAX_PACKET_SIZE * i + 1, RTP_MAX_PACKET_SIZE);
             SendFrame(rtpframe, clientAddr);
             rtpframe.m_head.serial++;
         }
-        if (restsz != 0)
+        if (restsz > 0)
         {
-            ((BYTE*)rtpframe.m_payload)[1] |= RTP_HEADER_END;
+            ((BYTE*)rtpframe.m_payload)[0] = RTP_HEADER_IMPORTANT | RTP_HEADER_TYPE_FUA;
+            ((BYTE*)rtpframe.m_payload)[1] = nalu | RTP_HEADER_END;
+            memcpy((BYTE*)rtpframe.m_payload + 2, pFrame + RTP_MAX_PACKET_SIZE * count + 1, restsz);
             SendFrame(rtpframe, clientAddr);
             rtpframe.m_head.serial++;
         }
     }
     else
     {
-        // small package, directly send
-        rtpframe.m_payload.resize(frame.size() - 4);
-		memcpy((void*)rtpframe.m_payload, (void*)frame, frame.size() - 4);
+        rtpframe.m_payload.resize(framesz);
+		memcpy(rtpframe.m_payload, pFrame, framesz);
         SendFrame(rtpframe, clientAddr);
         rtpframe.m_head.serial++;
     }
@@ -73,8 +75,8 @@ int RTPHelper::GetFrameHeaderSize(Buffer& frame)
 
 int RTPHelper::SendFrame(const Buffer& frame, const Address& clientAddr)
 {
-    int ret = sendto(m_udp, frame, frame.size(), 0, clientAddr, clientAddr.size());
-
+    int ret = sendto(m_udp, frame, frame.size(), 0, (sockaddr*)clientAddr, clientAddr.size());
+    printf("Send Frame ret:%d, size %d, ip:%s, port:%hu\r\n", ret, frame.size(), clientAddr.ip().c_str(), clientAddr.port());
     return 0;
 }
 
@@ -111,10 +113,11 @@ RTPHeader& RTPHeader::operator=(const RTPHeader& other)
 RTPHeader::operator Buffer() const
 {
     RTPHeader header = *this;
-    header.timestamp = htonl(header.timestamp);
     header.serial = htons(header.serial);
+    header.timestamp = htonl(header.timestamp);
     header.ssrc = htonl(header.ssrc);
-    int size = sizeof(RTPHeader);
+    // this is extremely critical, calculating size
+    int size = 12 + 4 * csrc_count;
     Buffer result(size);
     memcpy(result, &header, size);
     return result;

@@ -142,21 +142,24 @@ int RTSPSession::ResponseRequest(RTSP_PLAY_CALLBACK callback, RTSPServer* obj)
 		if (buffer.size() <= 0) return -1;
 
 		RTSPRequest request = ParseRequest(buffer);
-		if (request.method() == RTSPMethod::UINITIALIZED)
+		RTSPMethod m = request.method();
+		RTSPResponse response = Response(request);
+		ret = m_client.Send(response.toBuffer());
+
+		if (m == RTSPMethod::UINITIALIZED)
 		{
 			TRACE("Error at: [%s]\r\n", buffer.c_str());
 			return -2;
 		}
-
-		RTSPResponse response = Response(request);
-		ret = m_client.Send(response.toBuffer());
-		if (request.method() == RTSPMethod::PLAY)
+		else if (m == RTSPMethod::SETUP)
 		{
 			request.port() >> m_port;
+		}
+		else if (m == RTSPMethod::PLAY)
+		{
 			callback(obj, *this);
 		}
 	} while (ret >= 0);
-	if (ret < 0) return ret;
 	return ret;
 }
 
@@ -272,7 +275,11 @@ RTSPRequest RTSPSession::ParseRequest(const Buffer& buffer)
 	}
 	else if (strcmp(method, SETUP) == 0)
 	{
-		line = PickLine(data);
+		do {
+			line = PickLine(data);
+			if (strstr((const char*)line, "client_port") == NULL) continue;
+			break;
+		} while (line.size() > 0);
 		USHORT ports[2] = { 0, 0 };
 		/*
 			The sender may not send format or lines as expected
@@ -282,11 +289,10 @@ RTSPRequest RTSPSession::ParseRequest(const Buffer& buffer)
 			Transport: RTP/AVP;unicast;client_port=62696-62697
 			Transport: RTP/AVP/TCP;unicast;interleaved=0-1
 		*/
-		while (sscanf_s(line.c_str(), "Transport: RTP/AVP;unicast;client_port=%hu-%hu\r\n", ports, ports + 1) != 2)
+		if (sscanf_s(line.c_str(), "Transport: RTP/AVP;unicast;client_port=%hu-%hu\r\n", ports, ports + 1) != 2)
 		{
 			TRACE("Try at: [%s]\r\n", line.c_str());
-			line = PickLine(data);
-			if (line.size() <= 0) break;
+			return request;
 		}
 		request.SetClientPort(ports);
 	}

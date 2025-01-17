@@ -2,7 +2,7 @@
 
 MediaFile::MediaFile() :
 	m_pFile(NULL),
-	m_type(FileType::UNKNOWN)
+	m_type(FileType::H264)
 {
 
 }
@@ -57,22 +57,56 @@ Buffer MediaFile::ReadH264Frame()
 {
 	if (m_pFile)
 	{
-		long off = FindH264Head();
+		int headsz = 0;
+		long off = FindH264Head(headsz);
 		if (off == -1) return Buffer();
-		fseek(m_pFile, off + 3, SEEK_SET);
-		long tail = FindH264Head();
+		fseek(m_pFile, off + headsz, SEEK_SET);
+		long tail = FindH264Head(headsz);
 		if (tail == -1) tail = m_size;
 		long size = tail - off;
 		fseek(m_pFile, off, SEEK_SET);
 		Buffer frame(size);
 		fread((void*)frame, 1, size, m_pFile);
+		// include head
 		return frame;
 	}
 	return Buffer();
 }
 
+#if 1
+long MediaFile::FindH264Head(int& headsz)
+{
+	if (!m_pFile)
+	{
+		return -1;
+	}
+
+	long start_pos = ftell(m_pFile);
+	char buf[4];
+	while (fread(buf, 1, 4, m_pFile) == 4)
+	{
+		if ((buf[0] == 0x00 && buf[1] == 0x00 && buf[2] == 0x00 && buf[3] == 0x01))
+		{
+			headsz = 4;
+			fseek(m_pFile, -headsz, SEEK_CUR);
+			return ftell(m_pFile);
+		}
+		else if (buf[0] == 0x00 && buf[1] == 0x00 && buf[2] == 0x01)
+		{
+			headsz = 3;
+			fseek(m_pFile, -headsz, SEEK_CUR);
+			return ftell(m_pFile);
+		}
+		fseek(m_pFile, -3, SEEK_CUR);
+	}
+
+	return -1;
+}
+#endif
+
+#if 0
 // 0x 00 00 01 or 0x 00 00 00 01
-long MediaFile::FindH264Head()
+long MediaFile::FindH264Head(int& headsz)
 {
 	if (m_pFile)
 	{
@@ -82,26 +116,33 @@ long MediaFile::FindH264Head()
 			c = fgetc(m_pFile);
 			if (c == 0) break;
 		}
-		if (!feof(m_pFile))
+		while (!feof(m_pFile))
 		{
+			// There have severe issues!! fataals
 			c = fgetc(m_pFile);
 			if (c == 0)
 			{
 				c = fgetc(m_pFile);
 				if (c == 1)
 				{
-					return ftell(m_pFile) - 3; // 0x000001
+					headsz = 3;
+					return ftell(m_pFile) - headsz; // 0x000001
 				}
 				else if (c == 0)
 				{
 					c = fgetc(m_pFile);
-					if (c == 1) return ftell(m_pFile) - 4; // 0x00000001
+					if (c == 1)
+					{
+						headsz = 4;
+						return ftell(m_pFile) - headsz; // 0x00000001
+					}
 				}
 			}
 		}
 	}
 	return -1;
 }
+#endif
 
 #if 0
 Buffer MediaFile::ReadH264Frame()

@@ -64,6 +64,16 @@ public:
 		m_addr.sin_port = htons(port);
 		return *this;
 	}
+	const std::string ip() const
+	{
+		char buffer[INET_ADDRSTRLEN];
+		inet_ntop(AF_INET, &m_addr.sin_addr, buffer, INET_ADDRSTRLEN);
+		return std::string(buffer);
+	}
+	USHORT port() const
+	{
+		return m_port;
+	}
 private:
 	std::string m_strIP;
 	USHORT m_port;
