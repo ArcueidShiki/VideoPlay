@@ -1,6 +1,6 @@
 #pragma once
 #include <string>
-#include <minwindef.h>
+#include <intsafe.h>
 
 class Buffer : public std::string
 {
@@ -50,11 +50,11 @@ public:
 	}
 	operator BYTE* () const
 	{
-		return (BYTE*)c_str();
+		return (BYTE*)const_cast<char*>(c_str());
 	}
 	operator void* () const
 	{
-		return (void*)c_str();
+		return (void*)const_cast<char*>(c_str());
 	}
 	Buffer& operator=(const char* str)
 	{
@@ -91,9 +91,9 @@ public:
 		*this += s;
 		return *this;
 	}
-	const Buffer& operator>>(USHORT& data) const
+	const Buffer& operator>>(unsigned short& data) const
 	{
-		data = (USHORT)atoi(c_str());
+		data = (unsigned short)atoi(c_str());
 		return *this;
 	}
 

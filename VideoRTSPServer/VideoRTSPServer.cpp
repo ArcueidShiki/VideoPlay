@@ -3,8 +3,9 @@
 // 2. a UDP based RTP Server
 // 3. Add protocol process
 // 4. Add data process
-
 #include "RTSPServer.h"
+#include <Windows.h>
+#pragma comment(lib, "Ws2_32.lib")
 
 int main()
 {
