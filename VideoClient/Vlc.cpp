@@ -75,10 +75,10 @@ int CVlc::SetMedia(const std::string& strUrl)
 	m_player = libvlc_media_player_new_from_media(m_media);
 	if (!m_player) return -3;
 
-	//GetWindowRect(m_hWnd, &m_rect);
-	//std::string strRatio = "";
-	//strRatio.resize(32);
-	//sprintf_s((char*)strRatio.c_str(), 32, "%d:%d", m_rect.Width(), m_rect.Height());
+	GetWindowRect(m_hWnd, &m_rect);
+	std::string strRatio = "";
+	strRatio.resize(32);
+	sprintf_s((char*)strRatio.c_str(), 32, "%d:%d", m_rect.Width(), m_rect.Height());
 	libvlc_video_set_aspect_ratio(m_player, NULL);
 	libvlc_media_player_set_hwnd(m_player, m_hWnd);
 
@@ -95,7 +95,7 @@ int CVlc::SetHwnd(HWND hWnd)
 
 bool CVlc::IsValid()
 {
-	return 	m_instance && m_media && m_player && m_hWnd;
+	return 	m_instance && m_media && m_player/* && m_hWnd*/;
 }
 
 int CVlc::Play()
