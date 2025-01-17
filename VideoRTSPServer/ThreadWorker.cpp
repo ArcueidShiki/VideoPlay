@@ -8,7 +8,7 @@ ThreadWorker::ThreadWorker()
 
 ThreadWorker::~ThreadWorker()
 {
-	//base = nullptr; cannot be nullptr, it's has other references
+	base = nullptr; ///cannot be nullptr, it's has other references
 	func = nullptr;
 }
 

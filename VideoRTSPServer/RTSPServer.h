@@ -39,7 +39,10 @@ public:
 	const Buffer& url() const { return m_url; }
 	const Buffer& session() const { return m_session; }
 	const Buffer& sequence() const { return m_seq; }
-	const Buffer& port(int index = 0) const { return index ? m_client_port[1] : m_client_port[0]; }
+	const Buffer& port(int index = 0) const
+	{
+		return index ? m_client_port[1] : m_client_port[0];
+	}
 	~RTSPRequest();
 private:
 	RTSPMethod m_method;
@@ -61,6 +64,7 @@ public:
 	void SetClientPorts(const Buffer& port0, const Buffer& port1);
 	void SetServerPorts(const Buffer& port0, const Buffer& port1);
 	void SetSession(const Buffer& session);
+	void SetMethod(RTSPMethod method) { m_method = method; }
 	~RTSPResponse() {}
 	Buffer toBuffer();
 private:
@@ -88,7 +92,7 @@ private:
 	RTSPRequest ParseRequest(const Buffer& buffer);
 	RTSPResponse Response(const RTSPRequest& request);
 private:
-	std::string m_id;
+	Buffer m_id;
 	SPSocket m_client;
 };
 
@@ -111,5 +115,7 @@ private:
 	ThreadPool m_pool;
 	static SocketInitializer m_initializer;
 	CQueue<RTSPSession> m_qSessions;
+	::ThreadWorker m_workerMain;
+	::ThreadWorker m_workerSession;
 };
 

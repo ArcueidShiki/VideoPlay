@@ -11,7 +11,7 @@ int main()
 	RTSPServer server;
 	server.Init();
 	server.Invoke();
+	printf("Press any key to exit\n");
 	getchar();
-	server.Stop();
 	return 0;
 }
