@@ -19,12 +19,12 @@ public:
 	~CThread();
 	static void ThreadEntry(void* arg);
 	bool Start();
+	bool Stop();
 	void UpdateWorker(const ::ThreadWorker &worker = ::ThreadWorker());
 private:
 	friend class ThreadPool;
 	bool IsValid();
 	bool IsIdle();
-	bool Stop();
 	void ThreadWorker();
 	HANDLE m_hThread;
 	std::atomic<bool> m_aRunning;

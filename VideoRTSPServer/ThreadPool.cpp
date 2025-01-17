@@ -20,7 +20,6 @@ bool ThreadPool::Invoke()
 	bool ret = true;
 	for (size_t i = 0; i < m_threads.size(); i++)
 	{
-		// Start failed
 		if (!m_threads[i] || !m_threads[i]->Start())
 		{
 			ret = false;

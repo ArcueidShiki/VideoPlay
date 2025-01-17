@@ -3,7 +3,6 @@
 #include <WinSock2.h>
 #include <WS2tcpip.h>
 #include <string>
-
 // don't forget this
 #pragma comment(lib, "Ws2_32.lib")
 class Buffer : public std::string
@@ -23,6 +22,13 @@ public:
 	{
 		resize(strlen(str));
 		memcpy((void*)c_str(), str, strlen(str));
+	}
+	Buffer& operator=(USHORT data)
+	{
+		char s[16];
+		sprintf_s(s, "%d", data);
+		*this += s;
+		return *this;
 	}
 	~Buffer()
 	{
@@ -57,15 +63,7 @@ public:
 	}
 	Buffer& operator<<(const Buffer& data)
 	{
-		if (this != &data)
-		{
-			*this += data;
-		}
-		else
-		{
-			Buffer tmp = data;
-			*this += tmp;
-		}
+		strcat_s((char*)c_str(), size() + data.size() + 1, data.c_str());
 		return *this;
 	}
 
@@ -92,6 +90,11 @@ public:
 	{
 		data = (USHORT)atoi(c_str());
 		return *this;
+	}
+
+	bool operator==(const char* str) const
+	{
+		return strcmp(c_str(), str) == 0;
 	}
 };
 
@@ -230,6 +233,9 @@ public:
 	SPSocket Accept(Address &addr)
 	{
 		int len = addr.size();
+		if (m_socket == nullptr) return SPSocket(INVALID_SOCKET);
+		SOCKET server = *m_socket;
+		if (server == INVALID_SOCKET) return SPSocket(INVALID_SOCKET);
 		SOCKET s = accept(*m_socket, addr, &len);
 		return SPSocket(s, m_isTCP);
 	}
@@ -251,6 +257,7 @@ public:
 
 	int Send(const Buffer& buffer)
 	{
+		printf("Send:\n%s\n", buffer.c_str());
 		size_t index = 0;
 		char* pData = buffer;
 		while (index < buffer.size())
