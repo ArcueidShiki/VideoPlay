@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net9.0-windows10.0.26100.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.19041.0</TargetPlatformMinVersion>
+    <RootNamespace>VideoPlay.WinUI</RootNamespace>
+    <AssemblyName>VideoPlay</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
+    <Platforms>x64</Platforms>
+    <PlatformTarget>x64</PlatformTarget>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <UseWinUI>true</UseWinUI>
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>false</PublishSingleFile>
+    <PublishTrimmed>false</PublishTrimmed>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseSharedCompilation>false</UseSharedCompilation>
+    <Version>2.0.0</Version>
+    <Description>A focused WinUI 3 media player with bundled FFmpeg decoding.</Description>
+    <Company>ArcueidShiki</Company>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="FFmpegInteropX" Version="2.1.0.81200" />
+    <PackageReference Include="FFmpegInteropX.Desktop.FFmpeg" Version="8.1.2" GeneratePathProperty="true" />
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.260921001" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.4654" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Assets\**" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="ThirdPartyNotices.txt" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="licenses\*.txt" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="$(PkgFFmpegInteropX_Desktop_FFmpeg)\licenses\*.txt" Link="licenses\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <!-- The .NET publish list omits unpackaged WinUI's generated PRI/XBF files. -->
+  <Target Name="PublishXamlResources" AfterTargets="Publish">
+    <ItemGroup><XamlPublishFiles Include="$(TargetDir)*.pri;$(TargetDir)*.xbf" /></ItemGroup>
+    <Copy SourceFiles="@(XamlPublishFiles)" DestinationFolder="$(PublishDir)" SkipUnchangedFiles="true" />
+  </Target>
+</Project>

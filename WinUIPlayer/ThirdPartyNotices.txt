@@ -1,0 +1,15 @@
+VideoPlay uses the following third-party software, redistributed as separate libraries.
+
+Microsoft .NET runtime (MIT): https://github.com/dotnet/runtime/blob/main/LICENSE.TXT
+Microsoft Windows App SDK: https://github.com/microsoft/WindowsAppSDK/blob/main/LICENSE
+FFmpegInteropX 2.1.0 (Apache-2.0): https://github.com/ffmpeginteropx/FFmpegInteropX
+FFmpeg 8.1.2 (LGPL-2.1-or-later): https://ffmpeg.org/
+Exact upstream source: https://github.com/FFmpeg/FFmpeg/tree/38b88335f99e76ed89ff3c93f877fdefce736c13
+Build scripts: https://github.com/ffmpeginteropx/FFmpegInteropX/tree/841fc8e79346a235906f1dbd45be53034b2e2f52
+Microsoft Visual C++ 2022 x64 Redistributable 14.44: application-local runtime libraries.
+
+The FFmpeg binaries and their license/source information are distributed in the
+FFmpegInteropX.Desktop.FFmpeg NuGet package. See the accompanying licenses folder.
+Libraries remain dynamically linked and replaceable in the application directory.
+Reverse engineering of these libraries for debugging modifications is permitted
+under their applicable open-source licenses. VideoPlay source is MIT-licensed.

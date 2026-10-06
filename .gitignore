@@ -402,3 +402,7 @@ FodyWeavers.xsd
 *.~ml
 *.h264
 *.WeDrive
+# Local native UI smoke-test output
+TestResults/
+.build/
+dist/
