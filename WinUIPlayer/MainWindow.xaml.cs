@@ -23,6 +23,8 @@ public sealed partial class MainWindow : Window
     private string? currentLocation;
     private bool currentIsNetwork;
     private string error = "";
+    private double preferredVolume = 0.65;
+    private bool preferredMute;
     private readonly DispatcherTimer refresh = new() { Interval = TimeSpan.FromMilliseconds(500) };
     private readonly CancellationTokenSource lifetime = new();
 
@@ -73,15 +75,17 @@ public sealed partial class MainWindow : Window
         if (pickerOpen || dialogOpen || closed) return;
         pickerOpen = true;
         OpenButton.IsEnabled = false;
+        PickFileResult? file = null;
         try
         {
             var picker = new FileOpenPicker(AppWindow.Id) { SuggestedStartLocation = PickerLocationId.VideosLibrary };
             picker.FileTypeFilter.Add("*");
-            var file = await picker.PickSingleFileAsync();
-            if (file is not null && !closed) await OpenMediaAsync(file.Path, false);
+            file = await picker.PickSingleFileAsync();
         }
         catch (Exception ex) { ShowError("无法打开文件选择器。也可以将文件拖入窗口。", ex); }
         finally { pickerOpen = false; if (!closed) OpenButton.IsEnabled = true; }
+        // The modal guard belongs to the picker, not the potentially slow decoder.
+        if (file is not null && !closed) await OpenMediaAsync(file.Path, false);
     }
 
     internal async Task OpenMediaAsync(string location, bool network)
@@ -124,8 +128,24 @@ public sealed partial class MainWindow : Window
             FFmpegMediaSource next = await operation.AsTask(token);
             if (closed || request != generation) { next.Dispose(); return; }
             source = next;
-            var nextPlayer = new MediaPlayer { AutoPlay = true, AudioCategory = MediaPlayerAudioCategory.Movie, Volume = 0.65 };
+            var nextPlayer = new MediaPlayer
+            {
+                AutoPlay = true, AudioCategory = MediaPlayerAudioCategory.Movie,
+                Volume = preferredVolume, IsMuted = preferredMute
+            };
             player = nextPlayer;
+            nextPlayer.PlaybackSession.PlaybackStateChanged += (_, _) => DispatcherQueue.TryEnqueue(() =>
+            {
+                if (player != nextPlayer || closed) return;
+                RefreshState();
+            });
+            nextPlayer.PlaybackSession.SeekCompleted += (_, _) => DispatcherQueue.TryEnqueue(() =>
+            {
+                if (player != nextPlayer || closed) return;
+                if (nextPlayer.PlaybackSession.Position < nextPlayer.PlaybackSession.NaturalDuration)
+                    ClearEndedState();
+                RefreshState();
+            });
             nextPlayer.MediaOpened += (_, _) => DispatcherQueue.TryEnqueue(() =>
             {
                 if (player != nextPlayer || closed) return;
@@ -183,6 +203,11 @@ public sealed partial class MainWindow : Window
         ended = false;
         var oldPlayer = player;
         var oldSource = source;
+        if (oldPlayer is not null)
+        {
+            preferredVolume = oldPlayer.Volume;
+            preferredMute = oldPlayer.IsMuted;
+        }
         player = null;
         source = null;
         Video.SetMediaPlayer(null);
@@ -239,9 +264,11 @@ public sealed partial class MainWindow : Window
 
     private void RefreshState()
     {
-        if (player is null || closed || ended) return;
+        if (player is null || closed) return;
         var s = player.PlaybackSession;
-        StatusLabel.Text = s.PlaybackState switch
+        // Native transport controls and system media keys also change the player.
+        if (s.PlaybackState == MediaPlaybackState.Playing) ClearEndedState();
+        StatusLabel.Text = ended ? "播放结束" : s.PlaybackState switch
         {
             MediaPlaybackState.Playing => "正在播放",
             MediaPlaybackState.Paused => "已暂停",
@@ -250,6 +277,12 @@ public sealed partial class MainWindow : Window
             _ => "就绪"
         };
         DetailLabel.Text = s.NaturalVideoWidth > 0 ? $"{s.NaturalVideoWidth} × {s.NaturalVideoHeight}  ·  {s.Position:mm\\:ss} / {s.NaturalDuration:mm\\:ss}" : $"音频  ·  {s.Position:mm\\:ss} / {s.NaturalDuration:mm\\:ss}";
+    }
+
+    private void ClearEndedState()
+    {
+        ended = false;
+        ReplayButton.Visibility = Visibility.Collapsed;
     }
 
     private void OnKeyDown(object sender, KeyRoutedEventArgs e)
@@ -278,13 +311,16 @@ public sealed partial class MainWindow : Window
         if (dialogOpen || pickerOpen) return;
         dialogOpen = true;
         var input = new TextBox { PlaceholderText = "https://… 或 rtsp://…", Header = "视频地址", MinWidth = 360 };
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetAutomationId(input, "NetworkAddress");
         var dialog = new ContentDialog { XamlRoot = Root.XamlRoot, RequestedTheme = ElementTheme.Dark, Title = "打开网络视频", Content = input,
             PrimaryButtonText = "播放", CloseButtonText = "取消", DefaultButton = ContentDialogButton.Primary };
+        ContentDialogResult result;
         try
         {
-            if (await dialog.ShowAsync() == ContentDialogResult.Primary) await OpenMediaAsync(input.Text.Trim(), true);
+            result = await dialog.ShowAsync();
         }
         finally { dialogOpen = false; }
+        if (result == ContentDialogResult.Primary && !closed) await OpenMediaAsync(input.Text.Trim(), true);
     }
 
     private async void AboutClicked(object sender, RoutedEventArgs e)
@@ -325,6 +361,11 @@ public sealed partial class MainWindow : Window
         height = player?.PlaybackSession.NaturalVideoHeight ?? 0,
         audioTracks = source?.PlaybackItem?.AudioTracks.Count ?? 0,
         error, title = MediaTitle.Text, pickerOpen, dialogOpen,
+        playbackState = player?.PlaybackSession.PlaybackState.ToString(),
+        replayVisible = ReplayButton.Visibility == Visibility.Visible,
+        openEnabled = OpenButton.IsEnabled,
+        loading = LoadingPanel.Visibility == Visibility.Visible,
+        volume = player?.Volume ?? preferredVolume, muted = player?.IsMuted ?? preferredMute,
         fullScreen = AppWindow.Presenter.Kind == AppWindowPresenterKind.FullScreen,
         software = SoftwareDecode.IsChecked
     };

@@ -49,4 +49,6 @@ powershell.exe -NoProfile -File .\tests\WinUI-Smoke.ps1 `
 
 `--test-pipe=VideoPlay-test-<unique-id>` 仅在显式传入时启用当前用户可访问的本地测试通道；正常启动不会创建测试服务器。
 
+`tests\WinUI-NativeControls.ps1` 使用真实原生控件验证 EOF 后重播/拖动、静音与音量在换文件和切换解码模式后保持，以及慢文件打开期间的取消和替换。参数与上面的测试类似；提供 `-Dotnet` 可同时检查实际声音输出，提供 `-NetworkUrl` 可验证网络对话框取消/替换流程。
+
 已验证的格式和限制记录在 [WinUI 验证说明](docs/winui-validation.md)。第三方许可随安装目录的 `licenses` 和 `ThirdPartyNotices.txt` 提供。

@@ -28,6 +28,22 @@ Release publish and Debug build both completed without compiler warnings/errors.
 
 Windows UI Automation exposes named, keyboard-focusable file-open, choose-video and more-options buttons. The composed file-open button has an explicit accessible name. Full Narrator and high-contrast manual testing has not been performed.
 
+## Independent-review regressions
+
+The first smoke suite used the app's own playback methods for seek/replay and did not exercise every native transport path. `tests/WinUI-NativeControls.ps1` now invokes the real transport buttons, sliders, mute flyout, compatibility menu and file picker through Windows UI Automation. Its named pipe only observes state or reveals the native toolbar; it does not issue playback, open, seek, mute or cancel commands.
+
+The original PR build reproduced stale end/replay UI after native playback/seek, reset mute/volume on file replacement and compatibility reload, and a disabled file-open button while decoding a file selected through the picker. The fixes reconcile native playback/seek events, preserve audio preferences before replacing a player, and end modal guards as soon as their dialogs close.
+
+Slow-file cases use a real local HLS playlist whose segment is a Windows named pipe held open without data. FFmpeg genuinely blocks reading that input; no artificial delay or mocked decoder is used. Tests cancel or replace it with the actual controls and verify late completion cannot disturb the replacement. Native mute/volume tests also capture Windows audio output after replacement and compatibility reload. The network dialog has the same modal-lifetime coverage.
+
+The binary distribution also includes the Independent JPEG Group acknowledgment required by the pinned FFmpeg source's `LICENSE.md`. This does not change the LGPL identification of the supplied build.
+
+The revised native-control suite passed 17 checks. Replay screenshots changed 7.5% of sampled video pixels. WASAPI output remained exactly zero after muted file replacement and compatibility reload; unmuting at the retained 12% setting produced RMS 0.0093. A separate full installed-layout regression run verifies the wider format and repeated-action coverage.
+
+| Native replay before the fix | Native replay after the fix |
+| --- | --- |
+| ![Stale replay overlay and ended status](screenshots/native-replay-before.png) | ![Playing status with replay overlay cleared](screenshots/native-replay-after.png) |
+
 ## Screenshots
 
 | Original player | WinUI 3 idle |

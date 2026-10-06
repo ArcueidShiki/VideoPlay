@@ -36,7 +36,7 @@
                     <FontIcon Glyph="&#xE712;" FontSize="18" />
                     <Button.Flyout>
                         <MenuFlyout>
-                            <MenuFlyoutItem Text="打开网络地址…" Click="NetworkClicked"><MenuFlyoutItem.Icon><FontIcon Glyph="&#xE774;" /></MenuFlyoutItem.Icon></MenuFlyoutItem>
+                            <MenuFlyoutItem Text="打开网络地址…" Click="NetworkClicked" AutomationProperties.AutomationId="OpenNetwork"><MenuFlyoutItem.Icon><FontIcon Glyph="&#xE774;" /></MenuFlyoutItem.Icon></MenuFlyoutItem>
                             <MenuFlyoutItem Text="全屏" Click="FullScreenClicked" KeyboardAcceleratorTextOverride="F11"><MenuFlyoutItem.Icon><FontIcon Glyph="&#xE740;" /></MenuFlyoutItem.Icon></MenuFlyoutItem>
                             <MenuFlyoutSeparator />
                             <ToggleMenuFlyoutItem x:Name="SoftwareDecode" Text="兼容解码模式" Click="DecoderChanged" />

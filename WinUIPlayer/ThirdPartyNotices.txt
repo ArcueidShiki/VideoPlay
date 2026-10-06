@@ -8,6 +8,12 @@ Exact upstream source: https://github.com/FFmpeg/FFmpeg/tree/38b88335f99e76ed89f
 Build scripts: https://github.com/ffmpeginteropx/FFmpegInteropX/tree/841fc8e79346a235906f1dbd45be53034b2e2f52
 Microsoft Visual C++ 2022 x64 Redistributable 14.44: application-local runtime libraries.
 
+This software is based in part on the work of the Independent JPEG Group.
+The bundled FFmpeg contains IJG-derived libavcodec/jfdctfst.c,
+libavcodec/jfdctint_template.c and libavcodec/jrevdct.c. VideoPlay makes no
+additional changes to these files beyond the pinned upstream FFmpeg source.
+See https://github.com/FFmpeg/FFmpeg/blob/38b88335f99e76ed89ff3c93f877fdefce736c13/LICENSE.md
+
 The FFmpeg binaries and their license/source information are distributed in the
 FFmpegInteropX.Desktop.FFmpeg NuGet package. See the accompanying licenses folder.
 Libraries remain dynamically linked and replaceable in the application directory.
