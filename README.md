@@ -1,187 +1,54 @@
-﻿# Configuration:
+# VideoPlay
 
-## Architecture : `x86`
+一个专注于播放的 Windows 桌面播放器，使用真正的 **WinUI 3** 界面、`MediaPlayerElement` 和随应用提供的 **FFmpegInteropX / FFmpeg** 解码器。
 
-## Include Direcotries:
+## 使用
 
-Choose this: `Properties -> VC Directories -> include direcotries (this way is adding to env path)`
+- 打开文件、拖入文件，或把文件路径作为命令行参数传给 `VideoPlay.exe`。
+- 支持中文和包含空格的路径。主界面保持简洁，播放时显示原生播放控件。
+- 播放控件提供暂停、进度、音量、字幕/音轨（媒体包含时）和速度设置。
+- “更多选项”提供网络地址、全屏、兼容解码模式和快捷键。
+- `Ctrl+O` 打开文件，空格暂停/继续，左右键跳转 5 秒，`F11` 全屏，`Esc` 退出全屏。
+- 文件损坏、丢失或打开超时会显示可操作的错误提示，可重试或选择另一个文件。
 
-Instead of this: `Properties -> C/C++ additional include directories (this way is add compile arguments)`
+需要 Windows 10 2004（19041）或更新版本，x64。程序自带 .NET、Windows App SDK、FFmpeg 和 C++ 运行库，无需额外安装 VLC 或系统编解码器包。Windows N/KN 仍需要系统的 Media Feature Pack。
 
-`../ThirdParty/vlc/include`
+## 构建与安装包
 
-`../ThirdParty/vlc/include/vlc;`
+安装 .NET 9 SDK，在 Windows 上运行：
 
-`.`
-
-## Link Static Libraries:
-
-`Properties -> Linker -> Input -> addtional dependencies(static Libraries) ->`
-
-`..\ThirdParty\vlc\lib\libvlc.lib`
-
-`..\ThirdParty\vlc\lib\libvlccore.lib`
-
-## Dynamic Libraries:
-
-`Properties -> Debugging -> Environment ->`
-
-`PATH=$(ProjectDir)..\ThirdParty\vlc\;$(PATH)`
-
-## Output
-
-`Properties -> Advanced -> Use of MFC -> Use of MFC in a Shared DLL / static Library`
-
-## RTSP
-
-**OPTIONS**
-
-```txt
-Request:
-OPTIONS rtsp://example.com/media.mp4
-RTSP/1.0 CSeq: 1
-User-Agent: VideoClient/1.0
-
-Response:
-RTSP/1.0 200 OK
-CSeq: 1
-Public: OPTIONS, DESCRIBE, SETUP, PLAY, TEARDOWN
+```powershell
+.\scripts\Build-WinUI.ps1
 ```
 
-**DESCRIBE**
-```txt
-Request:
-DESCRIBE rtsp://example.com/media.mp4 RTSP/1.0
-CSeq: 2
-Accept: application/sdp
-User-Agent: VideoClient/1.0
+输出为 `dist\win-x64\VideoPlay.exe`。必须保留整个目录，不能单独复制 EXE。脚本验证必需的 WinUI PRI/XBF 资源及解码器 DLL，并从微软官方固定校验值的包中提取应用本地 C++ 运行库；不会安装系统组件。
 
-Response:
-RTSP/1.0 200 OK
-CSeq: 2
-Content-Base: rtsp://example.com/media.mp4/
-Content-Type: application/sdp
-Content-Length: 460
+使用 Inno Setup 编译器生成安装包：
 
-
-v=0
-o=- 2890844526 2890842807 IN IP4 127.0.0.1
-s=RTSP Session
-m=video 0 RTP/AVP 96
-a=control:streamid=0
-a=rtpmap:96 MP4V-ES/5544
-m=audio 0 RTP/AVP 97
-a=control:streamid=1
-a=rtpmap:97 mpeg4-generic/44100
-
-•	-: Username (omitted).
-•	2890844526: Session ID.
-•	2890842807: Session version.
-•	IN IP4 127.0.0.1: Network type (IN), address type (IP4), and address (127.0.0.1).
-
+```powershell
+.\scripts\Build-WinUI.ps1 -InnoCompiler 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe'
 ```
 
-**SETUP**
-```txt
-Request:
-SETUP rtsp://example.com/media.mp4/streamid=0 RTSP/1.0
-CSeq: 3
-Transport: RTP/AVP;unicast;client_port=8000-8001
-User-Agent: VideoClient/1.0
+生成 `dist\VideoPlay-2.0.0-preview-win-x64-setup.exe`。安装到当前用户目录，无需管理员权限，创建开始菜单快捷方式，可选桌面快捷方式，并提供标准卸载入口。已有无关目录不会被覆盖，卸载仅移除安装器跟踪的文件，保留用户后来加入的文件。预览安装包未进行发布者代码签名。
 
-Response:
-RTSP/1.0 200 OK
-CSeq: 3
-Transport: RTP/AVP;unicast;client_port=8000-8001;server_port=9000-9001
-Session: 12345678
+可用 Visual Studio 打开 `VideoPlay.WinUI.sln`。原有 C++ 项目继续保留，旧构建说明位于 [legacy-configuration.md](docs/legacy-configuration.md)，不参与新播放器发布。
+
+## 验证
+
+`tests\New-MediaFixtures.ps1` 可使用 FFmpeg 生成原创测试图案与 523.25 Hz 音频，包括 H.264/AAC MP4、MKV、VP9/Opus WebM、HEVC、AVI、FLAC。
+
+```powershell
+.\tests\New-MediaFixtures.ps1 -FFmpeg 'C:\tools\ffmpeg.exe' -OutputDirectory '.\TestResults\fixtures'
+dotnet build .\tests\AudioProbe\AudioProbe.csproj -c Release
+powershell.exe -NoProfile -File .\tests\WinUI-Smoke.ps1 `
+  -AppDirectory '.\dist\win-x64' -ArtifactsDirectory '.\TestResults\winui' `
+  -FixtureDirectory '.\TestResults\fixtures' -Dotnet (Get-Command dotnet).Source
 ```
 
-**PLAY**
-```txt
-Request:
-PLAY rtsp://example.com/media.mp4 RTSP/1.0
-CSeq: 4
-Session: 12345678
-Range: npt=0.000-
-User-Agent: VideoClient/1.0
+测试在独立、非输入桌面启动真实应用，从空工作目录打开原生选择器，检查视频区域变化像素，并通过 WASAPI 回环捕获实际音频输出；覆盖取消、暂停、拖动、重播、损坏文件和连续操作。测试音会短暂从系统默认输出设备播放。`tests\MediaServer.mjs` 提供仅监听本机的 HTTP 视频与停滞连接夹具，可将其 `/sample.mp4` URL 传给 `-NetworkUrl`。
 
-Response:
-RTSP/1.0 200 OK
-CSeq: 4
-Session: 12345678
-RTP-Info: url=rtsp://example.com/media.mp4/streamid=0;seq=9810092;rtptime=3450012
-```
+`--test-pipe=VideoPlay-test-<unique-id>` 仅在显式传入时启用当前用户可访问的本地测试通道；正常启动不会创建测试服务器。
 
-**TEARDOWN**
-```txt
-Request:
-TEARDOWN rtsp://example.com/media.mp4 RTSP/1.0
-CSeq: 5
-Session: 12345678
-User-Agent: VideoClient/1.0
+`tests\WinUI-NativeControls.ps1` 使用真实原生控件验证 EOF 后重播/拖动、静音与音量在换文件和切换解码模式后保持，以及慢文件打开期间的取消和替换。参数与上面的测试类似；提供 `-Dotnet` 可同时检查实际声音输出，提供 `-NetworkUrl` 可验证网络对话框取消/替换流程。
 
-Response:
-RTSP/1.0 200 OK
-CSeq: 5
-Session: 12345678
-```
-
-## SDP(Session Description Protocol)
-
-```txt
-•	v=: Protocol version (currently 0).
-•	o=: Originator and session identifier (username, session ID, version number, network type, address type, and address).
-•	s=: Session name.
-•	i=: Session information (optional).
-•	u=: URI of description (optional).
-•	e=: Email address (optional).
-•	p=: Phone number (optional).
-•	c=: Connection information (network type, address type, and connection address).
-•	b=: Bandwidth information (optional).
-•	t=: Time the session is active.
-•	r=: Repeat times (optional).
-•	z=: Time zone adjustments (optional).
-•	k=: Encryption key (optional).
-•	a=: Session attribute (optional).
-•	m=: Media name and transport address.
-•	a=: Media attribute (optional).
-
-
-v=0
-o=- 2890844526 2890842807 IN IP4 127.0.0.1
-s=RTSP Session
-i=Example of SDP format
-u=http://www.example.com
-e=contact@example.com
-c=IN IP4 192.168.1.1
-t=0 0
-a=tool:libavformat 58.29.100
-m=video 0 RTP/AVP 96
-a=rtpmap:96 H264/90000
-a=control:streamid=0
-m=audio 0 RTP/AVP 97
-a=rtpmap:97 mpeg4-generic/44100/2
-a=control:streamid=1
-a=control:track0
-96 for H264
-AVP(audio video protocol)
-```
-
-## RTP
-
-```txt
-•	Version (V): 2 bits, indicates the version of RTP.
-•	Padding (P): 1 bit, indicates if there are extra padding bytes at the end of the RTP packet.
-•	Extension (X): 1 bit, indicates if there is an extension header.
-•	CSRC Count (CC): 4 bits, indicates the number of CSRC identifiers.
-•	Marker (M): 1 bit, used to mark significant events in the media stream.
-•	Payload Type (PT): 7 bits, identifies the format of the RTP payload.
-•	Sequence Number: 16 bits, increments by one for each RTP packet sent.
-•	Timestamp: 32 bits, reflects the sampling instant of the first byte in the RTP payload.
-•	SSRC: 32 bits, identifies the synchronization source.
-•	CSRC: 0 to 15 items, 32 bits each, identifies contributing sources.
-
-•	SSRC: 0x45678901 (assigned by the mixer)
-•	CSRC List: [0x12345678, 0x23456789, 0x34567890]
-•	Payload: Mixed audio data from Alice, Bob, and Carol
-```
+已验证的格式和限制记录在 [WinUI 验证说明](docs/winui-validation.md)。第三方许可随安装目录的 `licenses` 和 `ThirdPartyNotices.txt` 提供。
