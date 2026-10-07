@@ -22,6 +22,25 @@ public static class WinUIAccessibility {
  public static void Invoke(IntPtr window,IntPtr desktop,string id) {
   OnDesktop(desktop,delegate(){((InvokePattern)Find(window,id).GetCurrentPattern(InvokePattern.Pattern)).Invoke();});
  }
+ public static void DismissFlyout(IntPtr window,IntPtr desktop) {
+  OnDesktop(desktop,delegate(){
+   var target=AutomationElement.FromHandle(window).FindFirst(TreeScope.Descendants,new PropertyCondition(AutomationElement.AutomationIdProperty,"Light Dismiss"));
+   if(target==null)return;
+   try{((InvokePattern)target.GetCurrentPattern(InvokePattern.Pattern)).Invoke();}
+   catch(ElementNotAvailableException){} // Already dismissed by the control.
+  });
+ }
+ public static void Focus(IntPtr window,IntPtr desktop,string id) {
+  OnDesktop(desktop,delegate(){
+   var target=Find(window,id);
+   if(target.Current.ControlType==ControlType.List)
+    target=target.FindFirst(TreeScope.Children,new PropertyCondition(AutomationElement.ControlTypeProperty,ControlType.ListItem));
+   if(!target.Current.IsKeyboardFocusable)
+    target=target.FindFirst(TreeScope.Descendants,new PropertyCondition(AutomationElement.IsKeyboardFocusableProperty,true));
+   if(target==null)throw new InvalidOperationException("No keyboard-focusable element within "+id);
+   target.SetFocus();
+  });
+ }
  public static void SetRange(IntPtr window,IntPtr desktop,string id,double value) {
   OnDesktop(desktop,delegate(){((RangeValuePattern)Find(window,id).GetCurrentPattern(RangeValuePattern.Pattern)).SetValue(value);});
  }

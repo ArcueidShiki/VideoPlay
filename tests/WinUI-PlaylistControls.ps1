@@ -7,11 +7,14 @@ param(
  [double[]]$Rates=@(0.25,1,2,5),
  [switch]$NoSeek,
  [switch]$PauseForRate,
+ [switch]$VisibleDesktop,
+ [switch]$CompareWindowCapture,
  [switch]$Software,
  [switch]$RateOnly,
  [switch]$ScreensOnly,
+ [switch]$KeyboardOnly,
  [double]$StartRate=1,
- [string]$SyncFile="sync-pulses-exact.mp4"
+ [string]$SyncFile="sync-pulses-coded.mp4"
 )
 $ErrorActionPreference='Stop'
 . "$PSScriptRoot\Initialize-WindowsTests.ps1"
@@ -74,7 +77,7 @@ function Capture($name){
 function Set-Rate($rate) {
  Invoke-Control 'PlaybackRate'
  [WinUIAccessibility]::SetRange($hwnd,[PlayerWindows]::Desktop,'RateSlider',$rate)
- if([WinUIAccessibility]::Exists($hwnd,[PlayerWindows]::Desktop,'Light Dismiss')){Invoke-Control 'Light Dismiss'}
+ [WinUIAccessibility]::DismissFlyout($hwnd,[PlayerWindows]::Desktop)
  Start-Sleep -Milliseconds 400
 }
 
@@ -101,7 +104,7 @@ function Add-Files($paths) {
 }
 function Select-Item($index) {[WinUIAccessibility]::SelectIndex($hwnd,[PlayerWindows]::Desktop,'Playlist',$index);Start-Sleep -Milliseconds 300}
 function Check-Output($name,[double]$seconds,[bool]$audible,[bool]$synchronized=$false) {
- $raw=& $Dotnet "$PSScriptRoot\AudioProbe\bin\Release\net9.0-windows\AudioProbe.dll" "$ArtifactsDirectory\$name.wav" $seconds ($hwnd.ToInt64().ToString()) ([PlayerWindows]::DesktopName) "--pid=$pidApp"
+ $raw=& $Dotnet "$PSScriptRoot\AudioProbe\bin\Release\net9.0-windows10.0.19041.0\AudioProbe.dll" "$ArtifactsDirectory\$name.wav" $seconds ($hwnd.ToInt64().ToString()) ([PlayerWindows]::DesktopName) "--pid=$pidApp" "--pipe=$pipeName"
  if($LASTEXITCODE){throw "Process audio observation failed: $name"}
  $audio=$raw|ConvertFrom-Json
  $valid=if($audible){$audio.rms -gt 0.005}else{$audio.rms -lt 0.0001}
@@ -113,6 +116,8 @@ function Check-Output($name,[double]$seconds,[bool]$audible,[bool]$synchronized=
 }
 
 try {
+ if($CompareWindowCapture -and !$VisibleDesktop){throw 'Window capture comparison requires the explicitly coordinated visible-desktop run.'}
+ if($VisibleDesktop){[PlayerWindows]::UseVisibleDesktop()}
  $pidApp=[PlayerWindows]::Launch("$AppDirectory\VideoPlay.exe","--test-pipe=$pipeName","$ArtifactsDirectory\empty")
  $hwnd=[PlayerWindows]::Find($pidApp,'VideoPlay',30000)
  Start-Sleep -Seconds 2
@@ -132,6 +137,25 @@ try {
  if($StartRate -ne 1){Set-Rate $StartRate}
  if($Software){Invoke-Control 'MoreOptions';Start-Sleep -Milliseconds 300;[WinUIAccessibility]::Toggle($hwnd,[PlayerWindows]::Desktop,'SoftwareDecode')}
  Pick "$SyncFixtureDirectory\$SyncFile";Wait-State @('Playing')|Out-Null
+ if($KeyboardOnly){
+  Invoke-Control 'PlayPauseButton';Wait-State @('Paused')|Out-Null
+  [WinUIAccessibility]::Toggle($hwnd,[PlayerWindows]::Desktop,'TogglePlaylist')
+  foreach($id in @('OpenFile','ToggleControls','TogglePlaylist','PlayPauseButton','ProgressSlider','Playlist','RemoveEntry','VolumeSlider','RateValue','RateSlider')){
+   if($id -eq 'VolumeSlider'){Invoke-Control 'VolumeMuteButton'}
+   if($id -in @('RateValue','RateSlider')){Invoke-Control 'PlaybackRate'}
+   [WinUIAccessibility]::Focus($hwnd,[PlayerWindows]::Desktop,$id)
+   Start-Sleep -Milliseconds 150
+   $focus=[PlayerWindows]::Focused($hwnd)
+   if($focus -eq [IntPtr]::Zero){throw "Missing keyboard HWND for $id"}
+   [PlayerWindows]::Key($focus,122);Start-Sleep -Milliseconds 300
+   Check "F11 enters fullscreen from focused $id" (State).fullScreen
+   [PlayerWindows]::Key([PlayerWindows]::Focused($hwnd),27);Start-Sleep -Milliseconds 300
+   Check "Escape exits fullscreen from focused $id" (!(State).fullScreen)
+   if([WinUIAccessibility]::Exists($hwnd,[PlayerWindows]::Desktop,'Light Dismiss')){Invoke-Control 'Light Dismiss'}
+  }
+  if(@($results|Where-Object {!$_.passed}).Count){throw 'Keyboard regression checks failed'}
+  return
+ }
  Capture 'external-controls'
  $rateIteration=0
  foreach($rate in $Rates) {
@@ -151,13 +175,18 @@ try {
   $s1=State;$timer=[Diagnostics.Stopwatch]::StartNew();Start-Sleep -Seconds 2;$s2=State;$elapsed=$timer.Elapsed.TotalSeconds
   Check "Clock advances at $rate x" ([Math]::Abs(($s2.position-$s1.position)/$elapsed-$rate) -lt [Math]::Max(0.15,$rate*0.12)) @{rate=$rate;actual=($s2.position-$s1.position)/$elapsed;state=$s2}
   $captureName="rate-$rateIteration-$rate"
-  $captureSeconds=[Math]::Max(10,6/$rate)
-  $raw=& $Dotnet "$PSScriptRoot\AudioProbe\bin\Release\net9.0-windows\AudioProbe.dll" "$ArtifactsDirectory\$captureName.wav" $captureSeconds ($hwnd.ToInt64().ToString()) ([PlayerWindows]::DesktopName) "--pid=$pidApp" "--pipe=$pipeName"
+  $captureSeconds=[Math]::Max(12,8/$rate)
+  [string[]]$windowArgs=@(if($CompareWindowCapture){'--compare-window-capture'})
+  $raw=& $Dotnet "$PSScriptRoot\AudioProbe\bin\Release\net9.0-windows10.0.19041.0\AudioProbe.dll" "$ArtifactsDirectory\$captureName.wav" $captureSeconds ($hwnd.ToInt64().ToString()) ([PlayerWindows]::DesktopName) "--pid=$pidApp" "--pipe=$pipeName" @windowArgs
   if($LASTEXITCODE){throw 'Audio sync observer failed'}
   $audio=$raw|ConvertFrom-Json
   Check "Real audio exists at $rate x" ($audio.rms -gt 0.005) $audio
   $sync=& node "$PSScriptRoot\Analyze-Sync.mjs" "$ArtifactsDirectory\$captureName.sync.json" | ConvertFrom-Json
   Check "Rendered video and process audio stay synchronized at $rate x" $sync.passed $sync
+  if($CompareWindowCapture){
+   $windowSync=& node "$PSScriptRoot\Analyze-Sync.mjs" "$ArtifactsDirectory\$captureName.sync.json" window | ConvertFrom-Json
+   Check "Composed window and process audio stay synchronized at $rate x" $windowSync.passed $windowSync
+  }
  }
 
  if(!$RateOnly) {
@@ -225,7 +254,7 @@ try {
   Pick "$SyncFixtureDirectory\silent-video.mp4";$s=Wait-State @('Playing')
   Check 'Open replaces the list and preserves speed for video without audio' ($s.playlist.Count -eq 1 -and $s.rate -eq 5 -and $s.audioTracks -eq 0) $s
   [WinUIAccessibility]::Toggle($hwnd,[PlayerWindows]::Desktop,'TogglePlaylist')
-  $raw=& $Dotnet "$PSScriptRoot\AudioProbe\bin\Release\net9.0-windows\AudioProbe.dll" "$ArtifactsDirectory\silent-video.wav" 4 ($hwnd.ToInt64().ToString()) ([PlayerWindows]::DesktopName) "--pid=$pidApp"
+  $raw=& $Dotnet "$PSScriptRoot\AudioProbe\bin\Release\net9.0-windows10.0.19041.0\AudioProbe.dll" "$ArtifactsDirectory\silent-video.wav" 4 ($hwnd.ToInt64().ToString()) ([PlayerWindows]::DesktopName) "--pid=$pidApp"
   if($LASTEXITCODE){throw 'Silent media capture failed'}
   $audio=$raw|ConvertFrom-Json;$observed=Get-Content "$ArtifactsDirectory\silent-video.sync.json" -Raw|ConvertFrom-Json
   Check 'Silent video renders changing pixels at 5x without creating audio' ($audio.rms -lt 0.0001 -and @($observed.videoObservations|Where-Object bright).Count -gt 0 -and @($observed.videoObservations|Where-Object {!$_.bright}).Count -gt 0) $audio
