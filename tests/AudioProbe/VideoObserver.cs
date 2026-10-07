@@ -1,7 +1,8 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
-// Observe displayed pixels and their capture times; never read decoder internals.
+// Observe window-rendered pixels and capture times, not decoder internals.
+// PrintWindow on a private desktop does not measure physical display timing.
 internal static class VideoObserver
 {
     [DllImport("user32.dll", CharSet=CharSet.Unicode)] private static extern nint OpenDesktop(string name, uint flags, bool inherit, uint access);
