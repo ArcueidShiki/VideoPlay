@@ -63,7 +63,7 @@ function Pick($path){
 }
 function Capture($name){[PlayerWindows]::Screenshot($hwnd,"$ArtifactsDirectory\$name.png")}
 function Audio($name){
- $raw=& $Dotnet "$PSScriptRoot\AudioProbe\bin\Release\net9.0-windows\AudioProbe.dll" "$ArtifactsDirectory\$name.wav" 2 "--pid=$pidApp"
+ $raw=& $Dotnet "$PSScriptRoot\AudioProbe\bin\Release\net9.0-windows10.0.19041.0\AudioProbe.dll" "$ArtifactsDirectory\$name.wav" 2 "--pid=$pidApp"
  if($LASTEXITCODE){throw 'WASAPI capture failed'}
  $raw|ConvertFrom-Json
 }

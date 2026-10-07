@@ -9,6 +9,7 @@ static async Task RunAsync(string[] args)
 // Never fall back to the desktop mix or a microphone.
 var processArg = args.FirstOrDefault(a => a.StartsWith("--pid="));
 var clockPipe = args.FirstOrDefault(a => a.StartsWith("--pipe="))?[7..];
+bool compareWindowCapture = args.Contains("--compare-window-capture");
 if (processArg is null || !uint.TryParse(processArg[6..], out uint target) || target == 0)
     throw new ArgumentException("Supply --pid=<test-player-process-id>; desktop-wide capture is disabled.");
 var sessionDiagnostics = new List<object>();
@@ -29,7 +30,10 @@ var sessionDiagnostics = new List<object>();
         }
     }
 }
-args = args.Where(a => !a.StartsWith("--pid=") && !a.StartsWith("--pipe=")).ToArray();
+args = args.Where(a => !a.StartsWith("--pid=") && !a.StartsWith("--pipe=") && a != "--compare-window-capture").ToArray();
+if (args.Length != 2 && args.Length != 4) throw new ArgumentException("Expected output, seconds, and optionally the test window HWND and desktop name.");
+if (compareWindowCapture && args.Length != 4) throw new ArgumentException("Window capture requires the explicit test HWND and desktop.");
+if (args.Length == 4) VideoObserver.RequireOwner((nint)long.Parse(args[2]), target, args[3]);
 using var capture = await ProcessLoopbackCapture.CreateAsync(target);
 using var writer = new WaveFileWriter(args[0], capture.WaveFormat);
 var data = new List<float>();
@@ -53,7 +57,8 @@ capture.DataAvailable += (_, e) =>
     double frames = e.BytesRecorded / capture.WaveFormat.BlockAlign;
     double end = capture.PacketStartQpcSeconds - origin + frames / capture.WaveFormat.SampleRate;
     audioObservations.Add(new { start = end - frames / capture.WaveFormat.SampleRate, end, rms = Math.Sqrt(power / Math.Max(1, frames)),
-        tone = 2 * Math.Sqrt(toneReal * toneReal + toneImaginary * toneImaginary) / Math.Max(1, frames) });
+        tone = 2 * Math.Sqrt(toneReal * toneReal + toneImaginary * toneImaginary) / Math.Max(1, frames),
+        pulseId = PulseIdentity.FromAudio(e.Buffer, e.BytesRecorded, capture.WaveFormat.BlockAlign, capture.WaveFormat.SampleRate) });
 };
 var stopped = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 capture.RecordingStopped += (_, e) => { if (e.Exception is not null) stopped.TrySetException(e.Exception); else stopped.TrySetResult(); };
@@ -61,6 +66,7 @@ capture.StartRecording();
 double seconds = double.Parse(args[1], System.Globalization.CultureInfo.InvariantCulture);
 var videoTask = args.Length > 3 ? VideoObserver.Observe((nint)long.Parse(args[2]), clock, seconds, args[3]) : Task.FromResult(new List<object>());
 var clockTask = clockPipe is null ? Task.FromResult(new List<object>()) : ClockObserver.Observe(clockPipe, clock, seconds);
+var windowTask = compareWindowCapture ? WindowCaptureObserver.Observe((nint)long.Parse(args[2]), target, clock, seconds) : Task.FromResult(new List<object>());
 await Task.Delay(TimeSpan.FromSeconds(seconds));
 capture.StopRecording();
 await stopped.Task;
@@ -68,7 +74,8 @@ List<object> videoObservations;
 try { videoObservations = await videoTask; }
 catch (Exception ex) { Console.Error.WriteLine(ex.Message); Environment.ExitCode = 1; return; }
 var clockObservations = await clockTask;
-if (args.Length > 2) File.WriteAllText(Path.ChangeExtension(args[0], ".sync.json"), JsonSerializer.Serialize(new { audioObservations, videoObservations, clockObservations }));
+var windowObservations = await windowTask;
+if (args.Length > 2) File.WriteAllText(Path.ChangeExtension(args[0], ".sync.json"), JsonSerializer.Serialize(new { audioObservations, videoObservations, clockObservations, windowObservations }));
 double power = data.Count == 0 ? 0 : data.Sum(x => (double)x*x)/data.Count;
 double re = 0, im = 0;
 for (int i = 0; i < data.Count; i++)

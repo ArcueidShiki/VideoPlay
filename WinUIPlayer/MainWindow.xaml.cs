@@ -317,6 +317,7 @@ public sealed partial class MainWindow : Window
 
     private void OnKeyDown(object sender, KeyRoutedEventArgs e)
     {
+        if (e.Key == VirtualKey.Escape && ExitFullScreen()) { e.Handled = true; return; }
         if (dialogOpen || pickerOpen || IsInteractiveKeySource(e.OriginalSource as DependencyObject)) return;
         switch (e.Key)
         {
@@ -326,12 +327,18 @@ public sealed partial class MainWindow : Window
                 e.Handled = true; break;
             case VirtualKey.Left: Seek((player?.PlaybackSession.Position.TotalSeconds ?? 0) - 5); e.Handled = true; break;
             case VirtualKey.Right: Seek((player?.PlaybackSession.Position.TotalSeconds ?? 0) + 5); e.Handled = true; break;
-            case VirtualKey.Escape:
-                if (AppWindow.Presenter.Kind == AppWindowPresenterKind.FullScreen) AppWindow.SetPresenter(AppWindowPresenterKind.Overlapped);
-                else Video.IsFullWindow = false;
-                e.Handled = true; break;
         }
     }
+    private bool ExitFullScreen()
+    {
+        if (dialogOpen || pickerOpen) return false;
+        if (AppWindow.Presenter.Kind == AppWindowPresenterKind.FullScreen)
+        { AppWindow.SetPresenter(AppWindowPresenterKind.Overlapped); return true; }
+        if (Video.IsFullWindow) { Video.IsFullWindow = false; return true; }
+        return false;
+    }
+    private void ExitFullScreenAccelerator(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
+        => args.Handled = ExitFullScreen();
     internal void ToggleFullScreen() => AppWindow.SetPresenter(AppWindow.Presenter.Kind == AppWindowPresenterKind.FullScreen ? AppWindowPresenterKind.Overlapped : AppWindowPresenterKind.FullScreen);
     private void FullScreenClicked(object sender, RoutedEventArgs e) => ToggleFullScreen();
     private void FullScreenAccelerator(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args) { ToggleFullScreen(); args.Handled = true; }

@@ -1,74 +1,68 @@
 # 2.1 playback controls and playlist validation
 
-This is a review preview, not a release-ready speed milestone. **0.25x still fails the audio/video synchronization check on the test machine.** The failure is retained in the test results; advancing the media clock alone is not counted as successful playback.
+**Draft: 0.25x audio/video synchronization remains blocked.** Independent review found that the original identical periodic pulses could alias by one whole period. All original synchronization passes are withdrawn. Their raw WAV/JSON files remain in the local artifacts directory; the uniquely identified pulse results below replace that evidence.
 
 ## User-visible behavior
 
-The transport bar occupies its own layout row below the video. The header toggle and Ctrl+H hide or restore it, including in full screen. Volume, speed, audio tracks and subtitles are grouped in small flyouts. The playlist is optional and supports multiple local files, independent duplicate entries, selection, removal and previous/next controls. End of media advances to the next item; the final item stops without wrapping. Removing the current item stops playback and never deletes its file. Open replaces the queue; Add appends without interrupting the current item.
+The transport bar occupies its own row below the video. The header toggle and Ctrl+H hide or restore it, including full screen. Volume, speed, audio tracks and subtitles are grouped in flyouts. The optional playlist supports adding multiple local files, independent duplicate entries, selection, removal, previous/next and automatic advance. The last item stops without wrapping. Open replaces the queue; Add preserves current playback. Removing an item never deletes its file.
 
-The speed setting is retained through pause, seeking and source replacement. Windows' mono rate-processing failure is worked around by duplicating only mono tracks into left/right channels before playback. Other channel layouts are preserved. Accurate seeking avoids snapping the requested position to a nearby keyframe.
+Speed is retained through pause, seeking and source replacement. Mono tracks are duplicated into left/right channels to work around silence during rate changes on the test machine; other channel layouts remain intact. Accurate seeking avoids keyframe snapping. Escape now has a global accelerator before the interactive-control guard, so focused buttons, toggles, sliders, playlist items and the speed input cannot trap the player in full screen. Modal dialogs and file pickers retain their own Escape behavior.
 
-## Verification method
+## Corrected measurement method
 
-Tests ran on Windows 11 x64 build 26200, with .NET SDK 9.0.318, Windows App SDK 1.8.260921001, FFmpegInteropX 2.1.0.81200 and FFmpeg 8.1.2. Real application windows run on private non-input desktops. UI Automation invokes the actual buttons, sliders, selection and file pickers. The playlist suite uses the opt-in pipe to observe state, not to perform playback actions.
+Tests use generated fixtures only. `sync-pulses-coded.mp4` gives pulse n a unique RGB base-4 code and tone frequency 400 + 100*n Hz, starting at source time 2*n seconds. Two consecutive captured observations must agree on the identity. Video/audio are paired only by that identity, one-to-one, never by nearest time. The playback clock determines expected coverage only: at least three complete expected pulses and 80% within the unchanged 150-ms tolerance are required. Legacy recordings without identity cannot pass. Six analyzer regressions include the reviewer's 5x / 400-ms whole-period delay, missing coverage, identity reuse and legacy recordings.
 
-`AudioProbe` uses Windows process-loopback capture restricted to the test player's PID and children. A PID is mandatory; there is no desktop-mix or microphone fallback. This verification needs Windows build 20348 or newer and an active output device. Only generated fixtures are opened. Earlier whole-desktop audio recordings are not used as proof of this milestone.
+`AudioProbe` requires a test PID and verifies that the supplied capture HWND belongs to it. Process-loopback audio includes only that PID and children; there is no desktop-mix or microphone fallback. Audio packets have QPC timestamps. A read-only private pipe samples the media clock for coverage and diagnostic correlation.
 
-`New-SpeedFixtures.ps1` generates a 60-fps video with simultaneous white-frame/523.25-Hz audio pulses every two media seconds, plus mono AAC, stereo AAC, PCM and audio-free variants. `Analyze-Sync.mjs` compares timestamped rendered pixels against captured audio onsets, requiring at least 80% of observed video onsets to match within 150 ms. Slow-speed observations last long enough to cover multiple pulses. Failing checks produce a nonzero test exit code.
+Private-desktop tests use `PrintWindow` on that HWND. The visible-desktop comparison also uses Windows Graphics Capture `CreateForWindow`, keeps the system capture border, disables cursor capture and records `SystemRelativeTime` QPC timestamps. Only the synthetic test window is captured. No monitor capture, permission-prompt acceptance or user setting changes are involved. The sandbox lacked the per-user capture service; the same authorized test worked in the desktop user's context.
 
-Video samples use `PrintWindow` on only the test player's window, with capture start/end timestamps. This measures application-rendered pixels on a private desktop, not the physical monitor's presentation time. Microsoft documents that the [owning application renders the captured image](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-printwindow). Audio packets use the process-loopback QPC timestamps. The optional `AudioProbe --pipe=VideoPlay-test-...` observer samples the playback clock every 25 ms and reports query duration. Clock correlation is diagnostic only and does not replace the unchanged pixel/audio pass criterion.
+**Window capture is not physical input-to-photon or speaker-to-display timing.** No external measurement hardware was used. PrintWindow timestamps represent application rendering; Windows Graphics Capture supplies composed-window frame timestamps. See Microsoft's [PrintWindow documentation](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-printwindow), [single-window capture API](https://learn.microsoft.com/en-us/windows/win32/api/windows.graphics.capture.interop/nf-windows-graphics-capture-interop-igraphicscaptureiteminterop-createforwindow), [frame timing guidance](https://learn.microsoft.com/en-us/windows/apps/develop/media-authoring-processing/screen-capture) and [process-loopback sample](https://github.com/microsoft/Windows-classic-samples/tree/main/Samples/ApplicationLoopback).
+
+## Fresh unique-identity results
+
+Windows 11 x64 build 26200; .NET SDK 9.0.318; Windows App SDK 1.8.260921001; FFmpegInteropX 2.1.0.81200; FFmpeg 8.1.2. Both capture methods observe the same player and PID audio in each visible-desktop run. Values are median absolute offsets in milliseconds. Every listed expected pulse was identified in both streams.
+
+| Rate / flow | PrintWindow | Window capture QPC | Within 150 ms, window capture |
+| --- | ---: | ---: | --- |
+| 0.25x, live change from 1x | 171.2 ms | 178.0 ms | **0/4, fail** |
+| 0.5x | 107.5 ms | 103.8 ms | 4/4, pass |
+| 0.75x | 96.9 ms | 93.0 ms | 4/4, pass |
+| 1x | 26.0 ms | 29.0 ms | 6/6, pass |
+| 2x | 47.8 ms | 41.7 ms | 12/12, pass |
+| 3x | 36.8 ms | 35.8 ms | 17/17, pass |
+| 4x | 31.0 ms | 37.5 ms | 23/23, pass |
+| 5x | 19.2 ms | 17.9 ms | 29/29, pass |
+
+The 0.25x window-capture offsets were 162.3, 184.1, 178.0 and 158.1 ms, so the failure survives unique identity and independent window capture. The same run's 1x control passed 5/5 pulses. A separate uniquely identified 1x private-desktop baseline passed 5/5. The rate matrix pauses, changes speed, seeks and resumes between samples to prevent EOF during setup; the 0.25x comparison changes speed while playing without seeking.
+
+The focused-key regression passed 20 checks: F11 entry and Escape exit from Open, control/playlist toggles, Play/Pause, progress, playlist item, nested remove button, volume, speed input and speed slider. The six analyzer counterexample tests pass. Earlier non-synchronization evidence includes 40 installed smoke checks and 17 native-control regressions (six formats, actual audio/mute/pause, cancellation/replacement, stalled network recovery and accurate seeking). Earlier synchronization assertions are superseded regardless of those suite totals.
+
+The fresh interaction run passed all 34 checks, including uniquely identified synchronization after Next, EOF replay and paused-seek/resume at 5x; the raw output is in `coded-interactions-final`. The rebuilt preview installer passed install/uninstall, all 556 published files matched by SHA256, and the installed application passed all 20 focused-key checks. Shortcut/registration cleanup succeeded and a user-added canary survived uninstall. Installer SHA256: `1BEE7EEB3FB45AB2729211986154DFF0E908164B744045D6D3CFC2DCE9C38098`. The helper build succeeded with a local NU1900 warning because NuGet vulnerability metadata was unreachable; audit settings were not disabled.
+
+Reproduction:
 
 ```powershell
 .\tests\New-MediaFixtures.ps1 -FFmpeg 'C:\tools\ffmpeg.exe' -OutputDirectory '.\TestResults\fixtures'
 .\tests\New-SpeedFixtures.ps1 -FFmpeg 'C:\tools\ffmpeg.exe' -OutputDirectory '.\TestResults\speed-fixtures'
 dotnet build .\tests\AudioProbe\AudioProbe.csproj -c Release
+node --test .\tests\Analyze-Sync.test.mjs
 .\tests\WinUI-PlaylistControls.ps1 -AppDirectory '.\dist\win-x64' `
-  -ArtifactsDirectory '.\TestResults\playlist' -FixtureDirectory '.\TestResults\fixtures' `
-  -SyncFixtureDirectory '.\TestResults\speed-fixtures' -Dotnet (Get-Command dotnet).Source
+  -ArtifactsDirectory '.\TestResults\quarter' -FixtureDirectory '.\TestResults\fixtures' `
+  -SyncFixtureDirectory '.\TestResults\speed-fixtures' -Dotnet (Get-Command dotnet).Source `
+  -Rates 1,0.25 -RateOnly -NoSeek -VisibleDesktop -CompareWindowCapture
 ```
 
-Use `-Rates @()` for the interaction suite only, `-RateOnly -Rates 0.25,0.5,1,2,5` for rate observations, and `-ScreensOnly` for review screenshots. Run scripts in a PowerShell environment that permits local scripts; changing execution policy is not required.
+Visible-desktop tests require coordinated use of the test window and a context with Windows capture support. They never switch from window capture to monitor capture. Use `-Rates 0.5,0.75,1,2,3,4,5 -RateOnly -VisibleDesktop -CompareWindowCapture` for the remaining matrix, `-KeyboardOnly` for focused-key checks, `-Rates @()` for interactions, and `-ScreensOnly` for screenshots. Use a policy-permitted PowerShell environment without changing execution policy.
 
-## Current evidence and remaining limit
+Raw captures and results are under local `artifacts-playlist/coded-window-quarter-final`, `coded-window-rate-matrix` and `coded-private-baseline`. [Compact review evidence](sync-review-evidence.json) retains pulse identities and measured offsets. Original `rate-*` and `clock-*` artifacts are retained as superseded diagnostics.
 
-- The playback/list interaction run passed 34 checks, including repeated hide/restore, full-screen recovery, duplicate entries, removal, corrupted-media recovery and video without audio. PID audio and rendered-pixel observations also passed after next, replay, paused seeking and resuming at 5x. New media opened at the retained 0.25x setting produced actual sound.
-- The native-control regression run passed all 17 checks, including real blocked-file and stalled-network cancellation/replacement, EOF replay, and mute/volume persistence with actual process audio.
-- Mono input originally produced zero process audio after any tested non-1x rate change. A minimal program using only Windows `MediaPlayer` and a native `MediaSource` reproduced that result at 0.25x, 1.5x and 2x. Converting the same original fixture to stereo restored sound at 0.25x, 0.5x, 1.5x, 2x and 5x. The application-level mono conversion then restored sound at all four tested endpoints/intermediate rates: 0.25x, 1x, 2x and 5x.
-- The installed build passed actual audio and rendered synchronization at 0.5x, 0.75x, 1x, 2x, 3x, 4x and 5x. At 0.25x with automatic video decoding, audio followed video by approximately 180–210 ms, exceeding the unchanged 150-ms criterion. Real-time playback did not resolve it; forced software video decoding was worse (approximately 710 ms). This is an observed limit on this machine, not a claim that Microsoft documents a universal 0.25x limitation.
-- The final installed-layout smoke suite passed all 40 checks, including accurate paused seeking, six media formats, real audio/mute/pause output, repeated actions, and HTTP timeout/recovery. Debug rebuild, Release publish and installer compilation succeeded. All 556 published files matched the installed copies by SHA256.
+## Remaining fix scope
 
-The FFmpeg source is attached to the live playback session following the [upstream sample](https://github.com/ffmpeginteropx/FFmpegInteropX/blob/master/Samples/MediaPlayerWinUI/MainPage.xaml.cs). Audio filters use the library's [per-stream filter API](https://github.com/ffmpeginteropx/FFmpegInteropX/blob/master/Source/FFmpegMediaSource.h). Windows documents rate control via [MediaPlaybackSession.PlaybackRate](https://learn.microsoft.com/en-us/windows/apps/develop/media-playback/play-audio-and-video-with-mediaplayer); it does not promise the measured sync tolerance. Process capture follows Microsoft's [ApplicationLoopback sample](https://github.com/microsoft/Windows-classic-samples/tree/main/Samples/ApplicationLoopback).
+No timing offset, tolerance relaxation or replacement playback engine has been introduced. Earlier packet-size and real-time-mode experiments did not establish a fix and were reverted. The application-rendered/composed-window agreement means the current 0.25x failure cannot be dismissed as just private-desktop PrintWindow timing.
 
-Do not merge this as completed full-range synchronized playback until the 0.25x failure is resolved or its scope is explicitly changed. No replacement playback engine or machine-specific timing offset has been introduced. Narrator, high-contrast mode, additional audio endpoints, surround output and production RTSP services still require manual coverage.
+The smallest next implementation experiment is at the media-source rate-processing boundary: stretch decoded audio with FFmpeg's [atempo](https://ffmpeg.org/ffmpeg-filters.html#atempo), rescale both audio and video timestamps from the same source timeline, and play the resulting stream at the Windows player's normal rate. This avoids a guessed delay while retaining the WinUI controls and FFmpeg decoding. It requires explicit duration/seek/position mapping and verification of source replacement, EOF, repeated rate changes and track switching; simply applying an audio filter is insufficient. FFmpegInteropX may need a scoped source-timestamp extension. This is a proposed prototype, not an implemented or verified fix. A backend replacement would be a separate, larger decision if that approach cannot meet the contract.
 
-| Rate | Median observed A/V offset | Result |
-| --- | ---: | --- |
-| 0.25x, automatic decoding | 183.0 ms | Fail, 0/3 pulses within 150 ms |
-| 0.5x | 107.3 ms | Pass |
-| 0.75x | 96.6 ms | Pass |
-| 1x | 28.8 ms | Pass |
-| 2x | 44.2 ms | Pass |
-| 3x | 40.1 ms | Pass |
-| 4x | 37.1 ms | Pass |
-| 5x | 25.8 ms | Pass, 24/24 pulses |
-
-These are measurements from generated pulse fixtures, not guarantees for every codec, device or media file. The rate harness pauses before setting the next speed and seeking, so a high-speed fixture cannot reach EOF while the next sample is being prepared. Separate interaction checks cover live speed changes and source/EOF transitions.
-
-### Follow-up 0.25x diagnosis
-
-Decoding the source fixture independently with FFmpeg found video and audio pulse onsets at 2, 4, 6, 8 and 10 seconds, aligned within the 16.7-ms video/10-ms audio analysis resolution. The source does not contain the large measured offset. In the live-change run, captured audio remained exactly zero until its onset; the delay was not just a gradual ramp crossing the detector threshold.
-
-| Diagnostic run | Median absolute pixel/audio offset | Observation |
-| --- | ---: | --- |
-| Current application, live 1x to 0.25x (`-NoSeek`) | 170.7 ms | Fail; video was 3.8-11.7 ms behind the media clock, matched audio onsets 174.8-178.4 ms behind it |
-| Pause, change to 0.25x, resume without seeking (`-NoSeek -PauseForRate`) | 168.4 ms; 196.1 ms after returning through 1x | Both fail; pausing alone did not fix the delay |
-| Pause, change rate, seek and resume | 135.8 ms | One borderline pass, insufficient to establish a reliable fix |
-| Diagnostic native Windows `MediaSource`, stereo input | 139.2 ms | One pass; both outputs lagged the clock (video 123-141 ms, audio 268-270 ms) |
-| Diagnostic 256-sample FFmpeg audio frames | 1084.9 ms | Fail with clock stalls; experiment reverted |
-
-The clock queries took about 1 ms and individual pixel captures about 30 ms in these runs. Timing varies between runs; the 150-ms criterion has not been relaxed, and no delay compensation has been added. These results suggest buffering in the audio path, but they do not isolate a specific Windows or FFmpeg component. The packet-size experiment is not in the application. All production code remains identical to the tested preview installer.
-
-The next validation should independently observe the application's composed window on the visible desktop, while keeping PID-only audio capture and coordinating exclusive test-window use. That separates private-desktop capture timing from user-visible synchronization before considering any playback-backend change. Independent review and reliable 0.25x verification remain required before treating the full speed range as complete.
+Do not merge as completed 0.25-5x synchronized playback. Independent re-review remains required. Narrator, high-contrast mode, additional audio endpoints, surround output and production RTSP services also require manual coverage.
 
 ## Actual application screenshots
 

@@ -19,6 +19,9 @@ jobs:
       - name: Compile audio verification helper
         shell: pwsh
         run: dotnet build tests/AudioProbe/AudioProbe.csproj -c Release
+      - name: Verify synchronization analyzer counterexamples
+        shell: pwsh
+        run: node --test tests/Analyze-Sync.test.mjs
       - uses: actions/upload-artifact@v4
         with:
           name: VideoPlay-win-x64

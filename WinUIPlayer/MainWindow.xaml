@@ -5,6 +5,7 @@
    <KeyboardAccelerator Key="O" Modifiers="Control" Invoked="OpenAccelerator" />
    <KeyboardAccelerator Key="H" Modifiers="Control" Invoked="ControlsAccelerator" />
    <KeyboardAccelerator Key="F11" Invoked="FullScreenAccelerator" />
+   <KeyboardAccelerator Key="Escape" Invoked="ExitFullScreenAccelerator" />
   </Grid.KeyboardAccelerators>
   <Grid.RowDefinitions><RowDefinition Height="48"/><RowDefinition Height="64"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/><RowDefinition Height="40"/></Grid.RowDefinitions>
   <Grid x:Name="TitleBar" Background="Transparent" Padding="20,0,140,0">
