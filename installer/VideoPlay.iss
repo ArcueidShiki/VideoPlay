@@ -8,8 +8,8 @@
 [Setup]
 AppId={{37EEAF25-D97D-4F39-9D18-FD4702F47A2C}
 AppName=VideoPlay
-AppVersion=2.0.0-preview
-AppVerName=VideoPlay 2.0 Preview
+AppVersion=2.1.0-preview
+AppVerName=VideoPlay 2.1 Preview
 AppPublisher=ArcueidShiki
 AppPublisherURL=https://github.com/ArcueidShiki/VideoPlay
 DefaultDirName={localappdata}\Programs\VideoPlay
@@ -23,7 +23,7 @@ WizardStyle=modern
 SetupIconFile=..\WinUIPlayer\Assets\AppIcon.ico
 UninstallDisplayIcon={app}\VideoPlay.exe
 OutputDir={#OutputDir}
-OutputBaseFilename=VideoPlay-2.0.0-preview-win-x64-setup
+OutputBaseFilename=VideoPlay-2.1.0-preview-win-x64-setup
 Compression=lzma2
 SolidCompression=yes
 CloseApplications=yes

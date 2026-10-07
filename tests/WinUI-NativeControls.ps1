@@ -7,9 +7,7 @@ param(
  [switch]$Baseline
 )
 $ErrorActionPreference='Stop'
-Add-Type -Path "$PSScriptRoot\PlayerWindows.cs" -ReferencedAssemblies System.Drawing
-Add-Type -AssemblyName UIAutomationClient,UIAutomationTypes,WindowsBase
-Add-Type -Path "$PSScriptRoot\WinUIAccessibility.cs" -ReferencedAssemblies @([System.Windows.Automation.AutomationElement].Assembly.Location,[System.Windows.Automation.AutomationIdentifier].Assembly.Location,[System.Windows.Rect].Assembly.Location)
+. "$PSScriptRoot\Initialize-WindowsTests.ps1"
 $AppDirectory=[IO.Path]::GetFullPath($AppDirectory)
 $ArtifactsDirectory=[IO.Path]::GetFullPath($ArtifactsDirectory)
 $FixtureDirectory=[IO.Path]::GetFullPath($FixtureDirectory)
@@ -65,7 +63,7 @@ function Pick($path){
 }
 function Capture($name){[PlayerWindows]::Screenshot($hwnd,"$ArtifactsDirectory\$name.png")}
 function Audio($name){
- $raw=& $Dotnet "$PSScriptRoot\AudioProbe\bin\Release\net9.0-windows\AudioProbe.dll" "$ArtifactsDirectory\$name.wav" 2
+ $raw=& $Dotnet "$PSScriptRoot\AudioProbe\bin\Release\net9.0-windows\AudioProbe.dll" "$ArtifactsDirectory\$name.wav" 2 "--pid=$pidApp"
  if($LASTEXITCODE){throw 'WASAPI capture failed'}
  $raw|ConvertFrom-Json
 }
@@ -122,14 +120,14 @@ try{
  Invoke-Control 'AudioMuteButton'
  Start-Sleep -Milliseconds 200
  Check 'Native volume and mute controls accepted' ((Control-Name 'AudioMuteButton') -eq 'Unmute' -and [WinUIAccessibility]::RangeValue($hwnd,[PlayerWindows]::Desktop,'VolumeSlider') -eq 12)
- Invoke-Control 'Light Dismiss'
+ if([WinUIAccessibility]::Exists($hwnd,[PlayerWindows]::Desktop,'Light Dismiss')){Invoke-Control 'Light Dismiss'}
  Pick "$FixtureDirectory\vp9-opus.webm"
  if(!$Baseline){Wait-State @('Playing')|Out-Null}else{Start-Sleep -Seconds 2}
  Show-Controls;Invoke-Control 'VolumeMuteButton'
  $level=[WinUIAccessibility]::RangeValue($hwnd,[PlayerWindows]::Desktop,'VolumeSlider')
  $mute=Control-Name 'AudioMuteButton'
  Check 'Native mute and low volume survive file replacement' ($level -eq 12 -and $mute -eq 'Unmute') @{volume=$level;muteButton=$mute;state=(State)}
- Invoke-Control 'Light Dismiss'
+ if([WinUIAccessibility]::Exists($hwnd,[PlayerWindows]::Desktop,'Light Dismiss')){Invoke-Control 'Light Dismiss'}
  if($Dotnet -and !$Baseline){$audio=Audio 'muted-after-file';Check 'Actual output stays muted after native file replacement' ($audio.rms -lt 0.0001) $audio}
  Invoke-Control 'MoreOptions';Start-Sleep -Milliseconds 200
  [WinUIAccessibility]::Toggle($hwnd,[PlayerWindows]::Desktop,'SoftwareDecode')
@@ -140,7 +138,7 @@ try{
  Check 'Native mute and volume survive compatibility reload' ($level -eq 12 -and $mute -eq 'Unmute') @{volume=$level;muteButton=$mute;state=(State)}
  if($Dotnet -and !$Baseline){$audio=Audio 'muted-after-compatibility';Check 'Actual output stays muted after compatibility reload' ($audio.rms -lt 0.0001) $audio}
  Invoke-Control 'AudioMuteButton'
- Invoke-Control 'Light Dismiss'
+ if([WinUIAccessibility]::Exists($hwnd,[PlayerWindows]::Desktop,'Light Dismiss')){Invoke-Control 'Light Dismiss'}
  if($Dotnet -and !$Baseline){$audio=Audio 'low-volume';Check 'Native unmute retains low output level' ($audio.rms -gt 0.001 -and $audio.rms -lt 0.025) $audio}
  $blocked=Start-SlowFile
  $enabled=[WinUIAccessibility]::Enabled($hwnd,[PlayerWindows]::Desktop,'OpenFile')
