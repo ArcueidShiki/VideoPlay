@@ -37,6 +37,22 @@ public static class WinUIAccessibility {
  public static void SetValue(IntPtr window,IntPtr desktop,string id,string value) {
   OnDesktop(desktop,delegate(){((ValuePattern)Find(window,id).GetCurrentPattern(ValuePattern.Pattern)).SetValue(value);});
  }
+ public static void SelectIndex(IntPtr window,IntPtr desktop,string id,int index) {
+  OnDesktop(desktop,delegate(){
+   var list=Find(window,id);
+   var items=list.FindAll(TreeScope.Children,new PropertyCondition(AutomationElement.ControlTypeProperty,ControlType.ListItem));
+   if(index<0 || index>=items.Count)throw new ArgumentOutOfRangeException("index");
+   ((SelectionItemPattern)items[index].GetCurrentPattern(SelectionItemPattern.Pattern)).Select();
+  });
+ }
+ public static void InvokeItemChild(IntPtr window,IntPtr desktop,string listId,int index,string childId) {
+  OnDesktop(desktop,delegate(){
+   var list=Find(window,listId);
+   var items=list.FindAll(TreeScope.Children,new PropertyCondition(AutomationElement.ControlTypeProperty,ControlType.ListItem));
+   var child=items[index].FindFirst(TreeScope.Descendants,new PropertyCondition(AutomationElement.AutomationIdProperty,childId));
+   ((InvokePattern)child.GetCurrentPattern(InvokePattern.Pattern)).Invoke();
+  });
+ }
  public static bool Exists(IntPtr window,IntPtr desktop,string id) {
   bool found=false;OnDesktop(desktop,delegate(){var root=AutomationElement.FromHandle(window);found=root.FindFirst(TreeScope.Descendants,new PropertyCondition(AutomationElement.AutomationIdProperty,id))!=null;});return found;
  }

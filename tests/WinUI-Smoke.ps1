@@ -6,7 +6,7 @@ param(
  [string]$NetworkUrl=''
 )
 $ErrorActionPreference='Stop'
-Add-Type -Path "$PSScriptRoot\PlayerWindows.cs" -ReferencedAssemblies System.Drawing
+. "$PSScriptRoot\Initialize-WindowsTests.ps1"
 $AppDirectory=[IO.Path]::GetFullPath($AppDirectory)
 $ArtifactsDirectory=[IO.Path]::GetFullPath($ArtifactsDirectory)
 $FixtureDirectory=[IO.Path]::GetFullPath($FixtureDirectory)
@@ -55,7 +55,7 @@ function Wait-PickerClosed {
 }
 function Audio($name) {
  $helper="$PSScriptRoot\AudioProbe\bin\Release\net9.0-windows\AudioProbe.dll"
- $raw=& $Dotnet $helper "$ArtifactsDirectory\$name.wav" 2
+ $raw=& $Dotnet $helper "$ArtifactsDirectory\$name.wav" 2 "--pid=$pidApp"
  if($LASTEXITCODE -ne 0){throw "Audio helper failed: $raw"}
  $raw | ConvertFrom-Json
 }

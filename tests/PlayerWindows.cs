@@ -51,6 +51,7 @@ public static class PlayerWindows {
     [DllImport("user32.dll")] static extern bool CloseDesktop(IntPtr desktop);
     public static IntPtr Desktop;
     static string desktopName="VideoPlayTests-"+Guid.NewGuid().ToString("N");
+    public static string DesktopName { get { return desktopName; } }
     static List<PROCESS_INFORMATION> processes = new List<PROCESS_INFORMATION>();
     public static uint Launch(string exe) { return Launch(exe,"",Path.GetDirectoryName(exe)); }
     public static uint Launch(string exe,string arguments,string workingDirectory) {
