@@ -19,7 +19,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseSharedCompilation>false</UseSharedCompilation>
-    <Version>2.0.0</Version>
+    <Version>2.1.0</Version>
     <Description>A focused WinUI 3 media player with bundled FFmpeg decoding.</Description>
     <Company>ArcueidShiki</Company>
   </PropertyGroup>

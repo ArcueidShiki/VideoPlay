@@ -23,6 +23,8 @@ public static class PlayerWindows {
     public delegate bool EnumProc(IntPtr hwnd, IntPtr state);
     [DllImport("user32.dll",CharSet=CharSet.Unicode,SetLastError=true)]
     static extern IntPtr CreateDesktop(string name,IntPtr device,IntPtr mode,int flags,uint access,IntPtr attributes);
+    [DllImport("user32.dll",SetLastError=true)] static extern IntPtr OpenInputDesktop(uint flags,bool inherit,uint access);
+    [DllImport("user32.dll",CharSet=CharSet.Unicode,SetLastError=true)] static extern bool GetUserObjectInformation(IntPtr handle,int index,StringBuilder text,int length,out int needed);
     [DllImport("kernel32.dll",CharSet=CharSet.Unicode,SetLastError=true)]
     static extern bool CreateProcess(string app,StringBuilder command,IntPtr pa,IntPtr ta,bool inherit,uint flags,IntPtr env,string cwd,ref STARTUPINFO startup,out PROCESS_INFORMATION process);
     [DllImport("user32.dll")] static extern bool EnumDesktopWindows(IntPtr desktop,EnumProc callback,IntPtr state);
@@ -51,6 +53,16 @@ public static class PlayerWindows {
     [DllImport("user32.dll")] static extern bool CloseDesktop(IntPtr desktop);
     public static IntPtr Desktop;
     static string desktopName="VideoPlayTests-"+Guid.NewGuid().ToString("N");
+    public static string DesktopName { get { return desktopName; } }
+    // Opt-in only, for coordinated tests of the explicitly launched player.
+    public static void UseVisibleDesktop() {
+        if(Desktop!=IntPtr.Zero)throw new InvalidOperationException("Select desktop before launching test players.");
+        Desktop=OpenInputDesktop(0,false,0x01ff);
+        if(Desktop==IntPtr.Zero)throw new Exception("OpenInputDesktop: "+Marshal.GetLastWin32Error());
+        var name=new StringBuilder(256);int needed;
+        if(!GetUserObjectInformation(Desktop,2,name,name.Capacity*2,out needed))throw new Exception("Cannot identify input desktop.");
+        desktopName=name.ToString();
+    }
     static List<PROCESS_INFORMATION> processes = new List<PROCESS_INFORMATION>();
     public static uint Launch(string exe) { return Launch(exe,"",Path.GetDirectoryName(exe)); }
     public static uint Launch(string exe,string arguments,string workingDirectory) {

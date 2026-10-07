@@ -22,6 +22,25 @@ public static class WinUIAccessibility {
  public static void Invoke(IntPtr window,IntPtr desktop,string id) {
   OnDesktop(desktop,delegate(){((InvokePattern)Find(window,id).GetCurrentPattern(InvokePattern.Pattern)).Invoke();});
  }
+ public static void DismissFlyout(IntPtr window,IntPtr desktop) {
+  OnDesktop(desktop,delegate(){
+   var target=AutomationElement.FromHandle(window).FindFirst(TreeScope.Descendants,new PropertyCondition(AutomationElement.AutomationIdProperty,"Light Dismiss"));
+   if(target==null)return;
+   try{((InvokePattern)target.GetCurrentPattern(InvokePattern.Pattern)).Invoke();}
+   catch(ElementNotAvailableException){} // Already dismissed by the control.
+  });
+ }
+ public static void Focus(IntPtr window,IntPtr desktop,string id) {
+  OnDesktop(desktop,delegate(){
+   var target=Find(window,id);
+   if(target.Current.ControlType==ControlType.List)
+    target=target.FindFirst(TreeScope.Children,new PropertyCondition(AutomationElement.ControlTypeProperty,ControlType.ListItem));
+   if(!target.Current.IsKeyboardFocusable)
+    target=target.FindFirst(TreeScope.Descendants,new PropertyCondition(AutomationElement.IsKeyboardFocusableProperty,true));
+   if(target==null)throw new InvalidOperationException("No keyboard-focusable element within "+id);
+   target.SetFocus();
+  });
+ }
  public static void SetRange(IntPtr window,IntPtr desktop,string id,double value) {
   OnDesktop(desktop,delegate(){((RangeValuePattern)Find(window,id).GetCurrentPattern(RangeValuePattern.Pattern)).SetValue(value);});
  }
@@ -36,6 +55,22 @@ public static class WinUIAccessibility {
  }
  public static void SetValue(IntPtr window,IntPtr desktop,string id,string value) {
   OnDesktop(desktop,delegate(){((ValuePattern)Find(window,id).GetCurrentPattern(ValuePattern.Pattern)).SetValue(value);});
+ }
+ public static void SelectIndex(IntPtr window,IntPtr desktop,string id,int index) {
+  OnDesktop(desktop,delegate(){
+   var list=Find(window,id);
+   var items=list.FindAll(TreeScope.Children,new PropertyCondition(AutomationElement.ControlTypeProperty,ControlType.ListItem));
+   if(index<0 || index>=items.Count)throw new ArgumentOutOfRangeException("index");
+   ((SelectionItemPattern)items[index].GetCurrentPattern(SelectionItemPattern.Pattern)).Select();
+  });
+ }
+ public static void InvokeItemChild(IntPtr window,IntPtr desktop,string listId,int index,string childId) {
+  OnDesktop(desktop,delegate(){
+   var list=Find(window,listId);
+   var items=list.FindAll(TreeScope.Children,new PropertyCondition(AutomationElement.ControlTypeProperty,ControlType.ListItem));
+   var child=items[index].FindFirst(TreeScope.Descendants,new PropertyCondition(AutomationElement.AutomationIdProperty,childId));
+   ((InvokePattern)child.GetCurrentPattern(InvokePattern.Pattern)).Invoke();
+  });
  }
  public static bool Exists(IntPtr window,IntPtr desktop,string id) {
   bool found=false;OnDesktop(desktop,delegate(){var root=AutomationElement.FromHandle(window);found=root.FindFirst(TreeScope.Descendants,new PropertyCondition(AutomationElement.AutomationIdProperty,id))!=null;});return found;
