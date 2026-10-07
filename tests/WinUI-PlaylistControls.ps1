@@ -6,6 +6,7 @@ param(
  [Parameter(Mandatory=$true)][string]$SyncFixtureDirectory,
  [double[]]$Rates=@(0.25,1,2,5),
  [switch]$NoSeek,
+ [switch]$PauseForRate,
  [switch]$Software,
  [switch]$RateOnly,
  [switch]$ScreensOnly,
@@ -137,7 +138,7 @@ try {
   $rateIteration++
   # Park the short fixture while operating the flyout; otherwise a preceding
   # high-rate case can reach EOF before the next observation starts.
-  if(!$NoSeek -and (State).state -eq 'Playing') {
+  if((!$NoSeek -or $PauseForRate) -and (State).state -eq 'Playing') {
    Invoke-Control 'PlayPauseButton';Wait-State @('Paused')|Out-Null
   }
   Set-Rate $rate
@@ -145,12 +146,13 @@ try {
    [WinUIAccessibility]::SetRange($hwnd,[PlayerWindows]::Desktop,'ProgressSlider',4)
    Invoke-Control 'PlayPauseButton';Wait-State @('Playing')|Out-Null
   }
+  elseif($PauseForRate){Invoke-Control 'PlayPauseButton';Wait-State @('Playing')|Out-Null}
   Start-Sleep -Seconds 1
   $s1=State;$timer=[Diagnostics.Stopwatch]::StartNew();Start-Sleep -Seconds 2;$s2=State;$elapsed=$timer.Elapsed.TotalSeconds
   Check "Clock advances at $rate x" ([Math]::Abs(($s2.position-$s1.position)/$elapsed-$rate) -lt [Math]::Max(0.15,$rate*0.12)) @{rate=$rate;actual=($s2.position-$s1.position)/$elapsed;state=$s2}
   $captureName="rate-$rateIteration-$rate"
   $captureSeconds=[Math]::Max(10,6/$rate)
-  $raw=& $Dotnet "$PSScriptRoot\AudioProbe\bin\Release\net9.0-windows\AudioProbe.dll" "$ArtifactsDirectory\$captureName.wav" $captureSeconds ($hwnd.ToInt64().ToString()) ([PlayerWindows]::DesktopName) "--pid=$pidApp"
+  $raw=& $Dotnet "$PSScriptRoot\AudioProbe\bin\Release\net9.0-windows\AudioProbe.dll" "$ArtifactsDirectory\$captureName.wav" $captureSeconds ($hwnd.ToInt64().ToString()) ([PlayerWindows]::DesktopName) "--pid=$pidApp" "--pipe=$pipeName"
   if($LASTEXITCODE){throw 'Audio sync observer failed'}
   $audio=$raw|ConvertFrom-Json
   Check "Real audio exists at $rate x" ($audio.rms -gt 0.005) $audio

@@ -8,6 +8,7 @@ static async Task RunAsync(string[] args)
 // Capture only the explicitly supplied test player PID and its children.
 // Never fall back to the desktop mix or a microphone.
 var processArg = args.FirstOrDefault(a => a.StartsWith("--pid="));
+var clockPipe = args.FirstOrDefault(a => a.StartsWith("--pipe="))?[7..];
 if (processArg is null || !uint.TryParse(processArg[6..], out uint target) || target == 0)
     throw new ArgumentException("Supply --pid=<test-player-process-id>; desktop-wide capture is disabled.");
 var sessionDiagnostics = new List<object>();
@@ -28,7 +29,7 @@ var sessionDiagnostics = new List<object>();
         }
     }
 }
-args = args.Where(a => !a.StartsWith("--pid=")).ToArray();
+args = args.Where(a => !a.StartsWith("--pid=") && !a.StartsWith("--pipe=")).ToArray();
 using var capture = await ProcessLoopbackCapture.CreateAsync(target);
 using var writer = new WaveFileWriter(args[0], capture.WaveFormat);
 var data = new List<float>();
@@ -59,13 +60,15 @@ capture.RecordingStopped += (_, e) => { if (e.Exception is not null) stopped.Try
 capture.StartRecording();
 double seconds = double.Parse(args[1], System.Globalization.CultureInfo.InvariantCulture);
 var videoTask = args.Length > 3 ? VideoObserver.Observe((nint)long.Parse(args[2]), clock, seconds, args[3]) : Task.FromResult(new List<object>());
+var clockTask = clockPipe is null ? Task.FromResult(new List<object>()) : ClockObserver.Observe(clockPipe, clock, seconds);
 await Task.Delay(TimeSpan.FromSeconds(seconds));
 capture.StopRecording();
 await stopped.Task;
 List<object> videoObservations;
 try { videoObservations = await videoTask; }
 catch (Exception ex) { Console.Error.WriteLine(ex.Message); Environment.ExitCode = 1; return; }
-if (args.Length > 2) File.WriteAllText(Path.ChangeExtension(args[0], ".sync.json"), JsonSerializer.Serialize(new { audioObservations, videoObservations }));
+var clockObservations = await clockTask;
+if (args.Length > 2) File.WriteAllText(Path.ChangeExtension(args[0], ".sync.json"), JsonSerializer.Serialize(new { audioObservations, videoObservations, clockObservations }));
 double power = data.Count == 0 ? 0 : data.Sum(x => (double)x*x)/data.Count;
 double re = 0, im = 0;
 for (int i = 0; i < data.Count; i++)

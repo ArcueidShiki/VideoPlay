@@ -16,6 +16,8 @@ Tests ran on Windows 11 x64 build 26200, with .NET SDK 9.0.318, Windows App SDK 
 
 `New-SpeedFixtures.ps1` generates a 60-fps video with simultaneous white-frame/523.25-Hz audio pulses every two media seconds, plus mono AAC, stereo AAC, PCM and audio-free variants. `Analyze-Sync.mjs` compares timestamped rendered pixels against captured audio onsets, requiring at least 80% of observed video onsets to match within 150 ms. Slow-speed observations last long enough to cover multiple pulses. Failing checks produce a nonzero test exit code.
 
+Video samples use `PrintWindow` on only the test player's window, with capture start/end timestamps. This measures application-rendered pixels on a private desktop, not the physical monitor's presentation time. Microsoft documents that the [owning application renders the captured image](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-printwindow). Audio packets use the process-loopback QPC timestamps. The optional `AudioProbe --pipe=VideoPlay-test-...` observer samples the playback clock every 25 ms and reports query duration. Clock correlation is diagnostic only and does not replace the unchanged pixel/audio pass criterion.
+
 ```powershell
 .\tests\New-MediaFixtures.ps1 -FFmpeg 'C:\tools\ffmpeg.exe' -OutputDirectory '.\TestResults\fixtures'
 .\tests\New-SpeedFixtures.ps1 -FFmpeg 'C:\tools\ffmpeg.exe' -OutputDirectory '.\TestResults\speed-fixtures'
@@ -51,6 +53,22 @@ Do not merge this as completed full-range synchronized playback until the 0.25x 
 | 5x | 25.8 ms | Pass, 24/24 pulses |
 
 These are measurements from generated pulse fixtures, not guarantees for every codec, device or media file. The rate harness pauses before setting the next speed and seeking, so a high-speed fixture cannot reach EOF while the next sample is being prepared. Separate interaction checks cover live speed changes and source/EOF transitions.
+
+### Follow-up 0.25x diagnosis
+
+Decoding the source fixture independently with FFmpeg found video and audio pulse onsets at 2, 4, 6, 8 and 10 seconds, aligned within the 16.7-ms video/10-ms audio analysis resolution. The source does not contain the large measured offset. In the live-change run, captured audio remained exactly zero until its onset; the delay was not just a gradual ramp crossing the detector threshold.
+
+| Diagnostic run | Median absolute pixel/audio offset | Observation |
+| --- | ---: | --- |
+| Current application, live 1x to 0.25x (`-NoSeek`) | 170.7 ms | Fail; video was 3.8-11.7 ms behind the media clock, matched audio onsets 174.8-178.4 ms behind it |
+| Pause, change to 0.25x, resume without seeking (`-NoSeek -PauseForRate`) | 168.4 ms; 196.1 ms after returning through 1x | Both fail; pausing alone did not fix the delay |
+| Pause, change rate, seek and resume | 135.8 ms | One borderline pass, insufficient to establish a reliable fix |
+| Diagnostic native Windows `MediaSource`, stereo input | 139.2 ms | One pass; both outputs lagged the clock (video 123-141 ms, audio 268-270 ms) |
+| Diagnostic 256-sample FFmpeg audio frames | 1084.9 ms | Fail with clock stalls; experiment reverted |
+
+The clock queries took about 1 ms and individual pixel captures about 30 ms in these runs. Timing varies between runs; the 150-ms criterion has not been relaxed, and no delay compensation has been added. These results suggest buffering in the audio path, but they do not isolate a specific Windows or FFmpeg component. The packet-size experiment is not in the application. All production code remains identical to the tested preview installer.
+
+The next validation should independently observe the application's composed window on the visible desktop, while keeping PID-only audio capture and coordinating exclusive test-window use. That separates private-desktop capture timing from user-visible synchronization before considering any playback-backend change. Independent review and reliable 0.25x verification remain required before treating the full speed range as complete.
 
 ## Actual application screenshots
 
